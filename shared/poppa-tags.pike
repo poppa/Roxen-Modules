@@ -1,3 +1,30 @@
+/* -*- Mode: Pike; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 8 -*- */
+//! @b{Poppa Tags@}
+//!
+//! Various RXML tags.
+//! NOTE: The file relies on Gravtar.pike, Bitly.pike and Forecast.pike from
+//! which can be found in Social.pmod and WS.pmod at 
+//! @url{http://github.com/poppa/Pike-Modules/tree/master@}.
+//!
+//! Copyright © 2009, Pontus Östlund - @url{www.poppa.se@}
+//!
+//! @pre{@b{License GNU GPL version 3@}
+//!
+//! poppa-tags.pike is free software: you can redistribute it and/or modify
+//! it under the terms of the GNU General Public License as published by
+//! the Free Software Foundation, either version 3 of the License, or
+//! (at your option) any later version.
+//!
+//! poppa-tags.pike is distributed in the hope that it will be useful,
+//! but WITHOUT ANY WARRANTY; without even the implied warranty of
+//! MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//! GNU General Public License for more details.
+//!
+//! You should have received a copy of the GNU General Public License
+//! along with poppa-tags.pike. If not, see 
+//! <@url{http://www.gnu.org/licenses/@}>.
+//! @}
+
 #include <config.h>
 #include <module.h>
 inherit "module";
@@ -245,7 +272,7 @@ class TagEmitForecast // {{{
   array get_dataset(mapping args, RequestID id)
   {
     string ckey = sprintf("%s:%s", args->location, args->unit||"c");
-    Social.Yahoo.Forecast f;
+    WS.Yahoo.Forecast f;
 
     if ( mapping c = cache[ckey] ) {
       if (time() - c->time > c->forecast->time_to_live()) {
@@ -255,7 +282,7 @@ class TagEmitForecast // {{{
     }
 
     if (!f) {
-      f = Social.Yahoo.Forecast(args->location, args->unit);
+      f = WS.Yahoo.Forecast(args->location, args->unit);
       f->parse();
 
       cache[ckey] = ([

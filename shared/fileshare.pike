@@ -1,3 +1,5 @@
+// NOTE: Very much work in progress
+
 #include <module.h>
 #include <roxen.h>
 #include <stat.h>
