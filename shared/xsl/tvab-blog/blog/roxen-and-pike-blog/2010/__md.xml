@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<files>
+  <file name="index.xml">
+    <__export-encoding>iso-8859-1</__export-encoding>
+    <title>2010</title>
+    <keywords></keywords>
+    <description></description>
+    <uuid>14fd250b-0000-4000-87b6-0000671e7edf</uuid>
+    <http-content-type>sitebuilder/xml-page-editor</http-content-type>
+    <template>cms-common.xsl</template>
+    <stationery></stationery>
+    <category></category>
+    <external_use type="pike64">tmtlMKAoOA==</external_use>
+    <notify type="int">0</notify>
+    <author>2</author>
+  </file>
+  <dir>
+    <__export-encoding type="int">0</__export-encoding>
+    <uuid>a0492467-0000-4000-bebe-0000c9676813</uuid>
+  </dir>
+</files>

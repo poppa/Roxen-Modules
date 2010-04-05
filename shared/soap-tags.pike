@@ -21,7 +21,7 @@ Configuration conf;
 
 void create(Configuration _conf) // {{{
 {
-  set_module_creator("Pontus Östlund <spam@poppa.se>");
+  set_module_creator("Pontus Ã–stlund <spam@poppa.se>");
 } // }}}
 
 void start(int when, Configuration _conf) // {{{

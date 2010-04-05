@@ -1,0 +1,72 @@
+<mima-content>
+  <cond>
+    <!-- Ajax -->
+    <case variable="page.pathinfo = /ajax*">
+      <sscanf format="/ajax/%s" variables="var.path">&page.pathinfo;</sscanf>
+      <mima-ajax>
+	<path>&var.path;</path>
+      </mima-ajax>
+    </case>
+
+    <!-- Wiki -->
+    <case variable="page.pathinfo = /wiki*">
+      <sscanf format="/wiki/%s" variables="var.path">&page.pathinfo;</sscanf>
+      <mima-wiki>
+	<path>&var.path;</path>
+      </mima-wiki>
+    </case>
+
+    <!-- Source code browser -->
+    <case variable="page.pathinfo = /browser*">
+      <mima-source-browser>
+	<if variable="page.pathinfo = /browser/changeset*">
+	  <sscanf format="/browser/changeset/%d/%s"
+	          variables="var.rev,var.path">&page.pathinfo;</sscanf>
+	  <type>changeset</type>
+	  <revision>&var.rev;</revision>
+	</if>
+	<else>
+	  <sscanf format="/browser%s" variables="var.path">&page.pathinfo;</sscanf>
+	  <type>browser</type>
+	</else>
+	<path>&var.path;</path>
+      </mima-source-browser>
+    </case>
+
+    <!-- Tickets -->
+    <case variable="page.pathinfo = /ticket*">
+      <sscanf format="/ticket/%s/%d" variables="var.type,var.id">&page.pathinfo;</sscanf>
+      <if not="" variable="var.type">
+	<sscanf format="/ticket/%s" variables="var.type">&page.pathinfo;</sscanf>
+      </if>
+      <mima-ticket>
+	<if variable="var.type">
+	  <type>&var.type;</type>
+	</if>
+	<if variable="var.id">
+	  <id>&var.id;</id>
+	</if>
+      </mima-ticket>
+    </case>
+
+    <!-- Admin -->
+    <case variable="page.pathinfo = /admin*">
+      <if ppoint="mima-admin" write="">
+	<mima-admin>
+	  <sscanf format="/admin%s" variables="var.path">&page.pathinfo;</sscanf>
+	  <path>&var.path;</path>
+	</mima-admin>
+      </if>
+    </case>
+
+    <!-- Login -->
+    <case variable="page.pathinfo = /login*">
+      <mima-login />
+    </case>
+
+    <!-- Home -->
+    <default>
+      <mima-home-page />
+    </default>
+  </cond>
+</mima-content>

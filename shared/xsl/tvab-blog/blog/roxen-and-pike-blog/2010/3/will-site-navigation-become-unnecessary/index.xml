@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='utf-8'?>
+<page-components>          <tvab-blog-entry-component><id>comp:00004baf4b52:0000000016:10bc</id><variant>0</variant></tvab-blog-entry-component>          <header-component><id>comp:00004baf4b52:0000000017:10bc</id><variant>1</variant>
+<title></title><subtitle></subtitle></header-component>
+
+  <picture-component>
+    <id>comp:00004baf4b52:000000001f:10bc</id>
+    <variant>1</variant>
+    <title></title>
+    <subtitle></subtitle>
+    <text><p>Every year we conduct what's called a NKI-survey (Nöjd Kund-Index or satisfied customer index translated) and on the last one there were a few questions about our web site. In general we got good response but there were a few people complaining about it being hard to find what they were looking for at our site. Tekniska Verken’s web site is rather vast and it will of course be difficult to satisfy every visitor and make all content immediately accessible (like mom said: Everything can’t be at the front of the fridge.), but you can try to do what you can.</p>
+<p>When we recently redesigned our web site I took the responses from the survey into account and created a column, which appears regardless of what specific page you visit, to the right of the actual content. In this column there are a few links to pages I know many people wish to visit, and I developed a new module that will display the top most visited pages during the last few days – generated from the access log.</p>
+<p>And here comes the interesting part: There are always two specific pages in the top five, namely: <a href='http://tekniskaverken.se/index/'>Site Index</a> (A-Z) and the <a href='http://tekniskaverken.se/hitta/'>Site search</a>. My conclusion to this is that people’s web surfing behaviour has changed over the last few years. When you visit a site that you may not visit very frequently you don’t bother looking through the site navigation. You first look for a search page or a site index. In many cases I think the user knows what type of content they are out for so why bother looking through the entire site, or the site’s navigation, when you easily can search for the content or find it in the index.</p>
+<p>First of all I think that this behaviour is an offspring of the fact that many, if not most, users today is used to using global search engines like Google and Live Search and they start to expect that sites provide local search engines as well. I read somewhere that there are studies showing that something like 85% or so start their surfing session by going directly to a global search engine. It might be that the same behaviour applies when they hit a site. One thing that would be interesting to know is if there’s a difference in the usage of local search engines between people who visit a site directly and people who arrive from a global search engine? Hopefully (or?) the one from Google, for example, hit the content they were out to find directly. (Another question here, that I might find room for to explore later on, is to what extent a visitor coming from a global search engine is lead on to further explore the site they end up on.)</p>
+<p>One thing I think is for sure is that it will become more and more important to provide good search capabilities, either through a search engine or a site index (or both), locally on your own site.</p>
+<p>So the question is: Will site navigation be redundant in the future? Will web surfers only navigate by search engines and site indexes? I guess we will find out…</p></text>
+    <picture-src></picture-src>
+    <picture-comment></picture-comment>
+    <picture-alt></picture-alt>
+    <picture-link></picture-link>
+    <picture-map></picture-map>
+  </picture-component>  <footer-component><id>comp:00004baf4b52:0000000018:10bc</id><variant>2</variant><revised>2010-03-28T14:44:13</revised><author>Administrator</author></footer-component></page-components>

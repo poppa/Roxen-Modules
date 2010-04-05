@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<files>
+  <file name="blog.config.xsl">
+    <__export-encoding>iso-8859-1</__export-encoding>
+    <title></title>
+    <keywords></keywords>
+    <description></description>
+    <xsl-params type="pike64">tmtlMAEJBgZibG9nLXRpdGxlAAIGAnN0cmluZyYGD1JveGVuIGFuZCBQaWtlIGJsb2foBgVUVkFC
+IEJsb2cGEVRoZSB0aXRsZSBvZiB0aGUgYmxvZwYOYmxvZy1mdWxsLWV4Y2VycHRzAAIGBGNoZWNr
+Ym94Ly9o7wYeU2hvdyBmdWxsIGFydGljbGUgb24gYXJjaGl2ZSBwYWdlcwYOYmxvZy1jYXRlZ29y
+eS1wYXRoAAI/LwYiL2Jsb2cvcm94ZW4tYW5kLXBpa2UtYmxvZy9jYXRlZ29yeS54bWyv7wYcUGF0
+aCB0byB0aGUgYmxvZydzIGNhdGVnb3J5IHBhZ2UGCGJsb2ctYXV0aG9ycwACPy8GEXBvcHBhOnBv
+bnR1c0Bwb3BwYS5zZa/vBlNDb21tYSBzZXBhcmF0ZWQgbGlzdCBvZiBibG9nIGF1dGhvcnMgYW5k
+IHRoZWlyIGVtYWlscyAodXNlcm5hbWUxOmVtYWlsLHVzZXJuYW1lMjplbWFpbCkGCmJsb2ctdGFn
+cy1wYXRoAAI/LwYeL2Jsb2cvcm94ZW4tYW5kLXBpa2UtYmxvZy90YWdzLnhtbK/vBhdQYXRoIHRv
+IHRoZSBibG9nJ3MgdGFnIHBhZ2UGBWJsb2ctcm9vdAACPy8GFi9ibG9nL3JveGVuLWFuZC1waWtl
+LWJsb2cvr+8GFVBhdGggdG8gdGhlIHNwZWNpZmljIGJsb2cGDGJsb2ctZGVzY3JpcHRpb24AAgYA
+dGV4dC8GOkhlcmUgSSBibG9nIGFib3V0IFJveGVuIENNUyBhbmQgdGhlIFBpa2UgcHJvZ3JhbW1p
+bmcgbGFuZ3VhZ2Uur+8GE0Rlc2NyaXB0aW9uIG9mIHRoZSBibG9nBhdibG9nLWRlZmF1bHQtYWxs
+b3ctY29tbWVudHMAAg8Dpm9uDx0PBO8GFkFsbG93IGNvbW1lbnRzIHBlciBkZWZhdWx0Bg5ibG9n
+LXZpZXctcGVyLXBhZ2UAAuZpbnSmMTAPIg8E7wYxRGVmYXVsdCBudW1iZXIgb2YgZW50cmllcyB0
+byBkaXNwbGF5IG9uIGFyY2hpdmUgcGFnZXMGFmJsb2ctY29tbWVudC1tYWlsLXJlY2VpdmVyAAI/
+Ly8PBO8GbkNvbW1hIHNlcGFyYXRlZCBsaXN0IG9mIGVtYWlsIGFkZHJlc3NlcyB0aGF0IHNob3Vs
+ZCAgICAgICAgICAgICAgICAgcmVjZWl2ZSBub3RpZmljYXRpb25zIHdoZW4gbmV3IGNvbW1lbnRz
+IGFycml2ZQYOYmxvZy1jYXRlZ29yeS1maWxlAAI/LwYkL2Jsb2cvcm94ZW4tYW5kLXBpa2UtYmxv
+Zy9jYXRlZ29yaWVzLnhtbK/vBhxQYXRoIHRvIHRoZSBibG9nJ3MgY2F0ZWdvcnkgZmlsZQYFYmxv
+Zy1iYXNlAAI/LwYCL2Jsb2cvr+8GSEJhc2UgcGF0aCB0byBibG9nIGdyb3VwIC0gdGhhdCBpcyB0
+aGUgZGlyZWN0b3J5IGNvbnRhaW5pbmcgb25lIG9yIG1vcmUgYmxvZ3MGCmJsb2ctZGF0ZS1sYW5n
+AAI/L6Zlbq/vBjBMYW5ndWFnZSB0byB1c2UgaW4gYWxsIGRhdGUgdGFncyAoaS5lLiAnc3YnIG9y
+ICdlbicp</xsl-params>
+    <uuid>97b85ee5-0000-4000-92c8-0000321ef485</uuid>
+    <http-content-type>sitebuilder/xsl-template</http-content-type>
+    <selectable>yes</selectable>
+    <stationery></stationery>
+    <category></category>
+    <external_use type="pike64">tmtlMKAovw==</external_use>
+    <notify type="int">0</notify>
+    <author>2</author>
+  </file>
+  <file name="menu.xml">
+    <__export-encoding>iso-8859-1</__export-encoding>
+    <title></title>
+    <keywords></keywords>
+    <description></description>
+    <uuid>43f9d493-0000-4000-96e1-0000b2be6f8f</uuid>
+    <http-content-type>sitebuilder/xml-menu-editor</http-content-type>
+    <template>cms-common.xsl</template>
+    <stationery></stationery>
+    <category></category>
+    <external_use type="pike64">tmtlMKAovw==</external_use>
+    <notify type="int">0</notify>
+    <author>2</author>
+  </file>
+  <file name="index.xml">
+    <__export-encoding>iso-8859-1</__export-encoding>
+    <title>Roxen and Pike blog</title>
+    <keywords></keywords>
+    <description></description>
+    <uuid>24a80f93-0000-4000-99bb-0000be341c32</uuid>
+    <http-content-type>sitebuilder/xml-page-editor</http-content-type>
+    <template>cms-common.xsl</template>
+    <stationery></stationery>
+    <category></category>
+    <external_use type="pike64">tmtlMKAoOA==</external_use>
+    <notify type="int">0</notify>
+    <author>2</author>
+  </file>
+  <file name="category.xml">
+    <__export-encoding>iso-8859-1</__export-encoding>
+    <title>Blog categories</title>
+    <keywords></keywords>
+    <description></description>
+    <uuid>1b805ac5-0000-4000-8d0d-0000caa71238</uuid>
+    <http-content-type>sitebuilder/xml-page-editor</http-content-type>
+    <template>cms-common.xsl</template>
+    <stationery></stationery>
+    <category></category>
+    <external_use type="pike64">tmtlMKAoOA==</external_use>
+    <notify type="int">0</notify>
+    <author>2</author>
+  </file>
+  <file name="categories.xml">
+    <__export-encoding>iso-8859-1</__export-encoding>
+    <title></title>
+    <keywords></keywords>
+    <description></description>
+    <uuid>bded968a-0000-4000-aabb-0000e69b70aa</uuid>
+    <http-content-type>sitebuilder/xml-category</http-content-type>
+    <stationery></stationery>
+    <category></category>
+    <external_use type="pike64">tmtlMKAovw==</external_use>
+    <notify type="int">0</notify>
+    <author>2</author>
+  </file>
+  <file name="tags.xml">
+    <__export-encoding>iso-8859-1</__export-encoding>
+    <title>Blog tags</title>
+    <keywords></keywords>
+    <description></description>
+    <uuid>2d15334a-0000-4000-98d3-0000769b0419</uuid>
+    <http-content-type>sitebuilder/xml-page-editor</http-content-type>
+    <template>cms-common.xsl</template>
+    <stationery></stationery>
+    <category></category>
+    <external_use type="pike64">tmtlMKAoOA==</external_use>
+    <notify type="int">0</notify>
+    <author>2</author>
+  </file>
+  <dir>
+    <__export-encoding type="int">0</__export-encoding>
+    <uuid>e9183386-0000-4000-9644-0000ce943a80</uuid>
+  </dir>
+</files>

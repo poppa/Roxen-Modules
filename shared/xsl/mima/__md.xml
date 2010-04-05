@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<files>
+  <file name="index.xml">
+    <__export-encoding>iso-8859-1</__export-encoding>
+    <title>Mima</title>
+    <keywords></keywords>
+    <description></description>
+    <uuid>ef6b0c40-0000-4000-bb74-00005369f18c</uuid>
+    <http-content-type>sitebuilder/xml-page-editor</http-content-type>
+    <template>cms-common.xsl</template>
+    <stationery></stationery>
+    <category></category>
+    <external_use type="pike64">tmtlMKAoOA==</external_use>
+    <notify type="int">0</notify>
+    <author>2</author>
+  </file>
+  <file name="cms-common.xsl">
+    <__export-encoding>iso-8859-1</__export-encoding>
+    <title></title>
+    <keywords></keywords>
+    <description></description>
+    <xsl-params type="pike64">tmtlMCE=</xsl-params>
+    <uuid>1fc240b4-0000-4000-8a0f-0000ca3cfed4</uuid>
+    <http-content-type>sitebuilder/xsl-template</http-content-type>
+    <selectable>yes</selectable>
+    <stationery></stationery>
+    <category></category>
+    <external_use type="pike64">tmtlMKAovw==</external_use>
+    <notify type="int">0</notify>
+    <author>2</author>
+  </file>
+  <file name="ajax.xsl">
+    <__export-encoding>iso-8859-1</__export-encoding>
+    <title></title>
+    <keywords></keywords>
+    <description></description>
+    <xsl-params type="pike64">tmtlMCE=</xsl-params>
+    <uuid>a1f4fbba-0000-4000-a701-0000911cad15</uuid>
+    <http-content-type>sitebuilder/xsl-template</http-content-type>
+    <selectable>yes</selectable>
+    <stationery></stationery>
+    <category></category>
+    <external_use type="pike64">tmtlMKAovw==</external_use>
+    <notify type="int">0</notify>
+    <author>2</author>
+  </file>
+  <dir>
+    <__export-encoding type="int">0</__export-encoding>
+    <uuid>cd2484cb-0000-4000-8198-0000910d5907</uuid>
+  </dir>
+</files>

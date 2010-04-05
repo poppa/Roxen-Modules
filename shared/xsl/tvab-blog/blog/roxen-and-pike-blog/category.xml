@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='utf-8'?>
+<page-components>
+
+  <header-component>
+    <variant>0</variant>
+    <title></title>
+    <subtitle></subtitle>
+    <id>comp:00004badee6a:0000000017:3163</id>
+  </header-component>
+
+  <tvab-blog-category-component>
+    <id>comp:00004badee6a:000000002a:3163</id>
+    <variant>0</variant>
+  </tvab-blog-category-component>
+
+  <footer-component>
+    <variant>0</variant>
+    <revised>2010-03-27T16:53:51</revised>
+    <author>Administrator</author>
+    <id>comp:00004badee6a:0000000018:3163</id>
+  </footer-component>
+
+</page-components>

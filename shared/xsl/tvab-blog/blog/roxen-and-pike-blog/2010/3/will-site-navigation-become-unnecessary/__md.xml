@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<files>
+  <file name="index.xml">
+    <__export-encoding>utf-8</__export-encoding>
+    <title>Will site navigation become unnecessary?</title>
+    <keywords>Google, NKI</keywords>
+    <description></description>
+    <uuid>1fcd25bd-0000-4000-b2a4-00009903938e</uuid>
+    <http-content-type>sitebuilder/xml-page-editor</http-content-type>
+    <template>cms-common.xsl</template>
+    <stationery></stationery>
+    <category>categories.xml!1269689966-4</category>
+    <external_use type="pike64">tmtlMKAoOA==</external_use>
+    <notify type="int">0</notify>
+    <author>2</author>
+  </file>
+  <dir>
+    <__export-encoding type="int">0</__export-encoding>
+    <uuid>1cafa3e0-0000-4000-999e-00002a87c5cf</uuid>
+  </dir>
+</files>

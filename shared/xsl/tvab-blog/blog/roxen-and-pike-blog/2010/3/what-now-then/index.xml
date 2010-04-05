@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<page-components>      <tvab-blog-entry-component><id>comp:00004baf4b52:0000000042:10bc</id><variant>0</variant></tvab-blog-entry-component>      <header-component><id>comp:00004baf4b52:0000000043:10bc</id><variant>1</variant>
+<title></title><subtitle></subtitle></header-component>
+
+  <picture-component>
+    <id>comp:00004baf4b52:000000004b:10bc</id>
+    <variant>1</variant>
+    <title></title>
+    <subtitle></subtitle>
+    <text><p>
+ Is there a way to make replication keep publishing timestamps from the back end server? This is always done using a database or equal? Or have I got it wrong? </p>
+<p style='margin-left: 40px'>The case at hand is related to the blogmodule and publishing dates beeing screwed on posts when updating the content. We are running a modified blog module, but the publishing code is almost intact. </p>
+<p>I guess we need a shared database, and disabled commithooks on the front end servers, right?</p></text>
+    <picture-src></picture-src>
+    <picture-comment></picture-comment>
+    <picture-alt></picture-alt>
+    <picture-link></picture-link>
+    <picture-map></picture-map>
+  </picture-component>  <footer-component><id>comp:00004baf4b52:0000000044:10bc</id><variant>2</variant><revised>2010-03-28T15:18:57</revised><author>Administrator</author></footer-component></page-components>

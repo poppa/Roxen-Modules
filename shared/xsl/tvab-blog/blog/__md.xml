@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<files>
+  <file name="index.xml">
+    <__export-encoding>iso-8859-1</__export-encoding>
+    <title>Blogs</title>
+    <keywords></keywords>
+    <description></description>
+    <uuid>8128cf46-0000-4000-ae61-00006af880b9</uuid>
+    <http-content-type>sitebuilder/xml-page-editor</http-content-type>
+    <template>cms-common.xsl</template>
+    <stationery></stationery>
+    <category></category>
+    <external_use type="pike64">tmtlMKAoOA==</external_use>
+    <notify type="int">0</notify>
+    <author>2</author>
+  </file>
+  <file name="blog.config.xsl">
+    <__export-encoding>iso-8859-1</__export-encoding>
+    <title></title>
+    <keywords></keywords>
+    <description></description>
+    <xsl-params type="pike64">tmtlMAEJBgZibG9nLXRpdGxlAAIGAnN0cmluZyYvaAYFVFZBQiBCbG9nBhFUaGUgdGl0bGUgb2Yg
+dGhlIGJsb2cGDmJsb2ctZnVsbC1leGNlcnB0cwACBgRjaGVja2JveC8vb68GHlNob3cgZnVsbCBh
+cnRpY2xlIG9uIGFyY2hpdmUgcGFnZXMGDmJsb2ctY2F0ZWdvcnktcGF0aAACPy8vb68GHFBhdGgg
+dG8gdGhlIGJsb2cncyBjYXRlZ29yeSBwYWdlBghibG9nLWF1dGhvcnMAAj8vL2+vBlNDb21tYSBz
+ZXBhcmF0ZWQgbGlzdCBvZiBibG9nIGF1dGhvcnMgYW5kIHRoZWlyIGVtYWlscyAodXNlcm5hbWUx
+OmVtYWlsLHVzZXJuYW1lMjplbWFpbCkGCmJsb2ctdGFncy1wYXRoAAI/Ly9vrwYXUGF0aCB0byB0
+aGUgYmxvZydzIHRhZyBwYWdlBgVibG9nLXJvb3QAAj8vL2+vBhVQYXRoIHRvIHRoZSBzcGVjaWZp
+YyBibG9nBgxibG9nLWRlc2NyaXB0aW9uAAIGAHRleHQvL2+vBhNEZXNjcmlwdGlvbiBvZiB0aGUg
+YmxvZwYXYmxvZy1kZWZhdWx0LWFsbG93LWNvbW1lbnRzAAIPAqZvbg8Wb68GFkFsbG93IGNvbW1l
+bnRzIHBlciBkZWZhdWx0Bg5ibG9nLXZpZXctcGVyLXBhZ2UAAuZpbnSmMTAPG2+vBjFEZWZhdWx0
+IG51bWJlciBvZiBlbnRyaWVzIHRvIGRpc3BsYXkgb24gYXJjaGl2ZSBwYWdlcwYWYmxvZy1jb21t
+ZW50LW1haWwtcmVjZWl2ZXIAAj8vL2+vBm5Db21tYSBzZXBhcmF0ZWQgbGlzdCBvZiBlbWFpbCBh
+ZGRyZXNzZXMgdGhhdCBzaG91bGQgICAgICAgICAgICAgICAgIHJlY2VpdmUgbm90aWZpY2F0aW9u
+cyB3aGVuIG5ldyBjb21tZW50cyBhcnJpdmUGDmJsb2ctY2F0ZWdvcnktZmlsZQACPy8vb68GHFBh
+dGggdG8gdGhlIGJsb2cncyBjYXRlZ29yeSBmaWxlBgVibG9nLWJhc2UAAj8vBgIvYmxvZy/orwZI
+QmFzZSBwYXRoIHRvIGJsb2cgZ3JvdXAgLSB0aGF0IGlzIHRoZSBkaXJlY3RvcnkgY29udGFpbmlu
+ZyBvbmUgb3IgbW9yZSBibG9ncwYKYmxvZy1kYXRlLWxhbmcAAj8vpnN2b68GMExhbmd1YWdlIHRv
+IHVzZSBpbiBhbGwgZGF0ZSB0YWdzIChpLmUuICdzdicgb3IgJ2VuJyk=</xsl-params>
+    <uuid>4840fe84-0000-4000-a92a-00001cf54285</uuid>
+    <http-content-type>sitebuilder/xsl-template</http-content-type>
+    <selectable>yes</selectable>
+    <stationery></stationery>
+    <category></category>
+    <external_use type="pike64">tmtlMKAovw==</external_use>
+    <notify type="int">0</notify>
+    <author>2</author>
+  </file>
+  <file name="latest.xsl">
+    <__export-encoding>iso-8859-1</__export-encoding>
+    <title></title>
+    <keywords></keywords>
+    <description></description>
+    <xsl-params type="pike64">tmtlMCE=</xsl-params>
+    <uuid>1cafbf74-0000-4000-ad62-0000561e256e</uuid>
+    <http-content-type>sitebuilder/xsl-template</http-content-type>
+    <selectable>yes</selectable>
+    <stationery></stationery>
+    <category></category>
+    <external_use type="pike64">tmtlMKAovw==</external_use>
+    <notify type="int">0</notify>
+    <author>2</author>
+  </file>
+  <file name="cms-components.xsl">
+    <__export-encoding>iso-8859-1</__export-encoding>
+    <title></title>
+    <keywords></keywords>
+    <description></description>
+    <xsl-params type="pike64">tmtlMCE=</xsl-params>
+    <uuid>8aec4602-0000-4000-82f9-00006badfdf4</uuid>
+    <http-content-type>sitebuilder/xsl-template</http-content-type>
+    <selectable>yes</selectable>
+    <stationery></stationery>
+    <category></category>
+    <external_use type="pike64">tmtlMKAovw==</external_use>
+    <notify type="int">0</notify>
+    <author>2</author>
+  </file>
+  <file name="cms-common.xsl">
+    <__export-encoding>iso-8859-1</__export-encoding>
+    <title></title>
+    <keywords></keywords>
+    <description></description>
+    <xsl-params type="pike64">tmtlMCE=</xsl-params>
+    <uuid>cf09f6fb-0000-4000-8972-0000d00856f7</uuid>
+    <http-content-type>sitebuilder/xsl-template</http-content-type>
+    <selectable>yes</selectable>
+    <stationery></stationery>
+    <category></category>
+    <external_use type="pike64">tmtlMKAovw==</external_use>
+    <notify type="int">0</notify>
+    <author>2</author>
+  </file>
+  <dir>
+    <__export-encoding type="int">0</__export-encoding>
+    <uuid>11cb2866-0000-4000-8797-0000c5043707</uuid>
+  </dir>
+</files>

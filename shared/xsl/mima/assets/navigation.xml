@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation>
+  <item>
+    <path></path>
+    <title>Home</title>
+  </item>
+  <item>
+    <path>/wiki</path>
+    <title>Wiki</title>
+  </item>
+  <item>
+    <path>/roadmap</path>
+    <title>Roadmap</title>
+  </item>
+  <item>
+    <path>/timeline</path>
+    <title>Timeline</title>
+  </item>
+  <item>
+    <path>/ticket</path>
+    <title>Tickets</title>
+  </item>
+  <item if="source-enabled">
+    <path>/browser</path>
+    <title>Source</title>
+  </item>
+  <item if="admin">
+    <path>/admin</path>
+    <title>Admin</title>
+  </item>
+</navigation>

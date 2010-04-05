@@ -170,7 +170,7 @@ string query_location()
 {
   return mountpoint;
 }
- 
+
 #ifdef THREADS
 private Thread.Mutex lfm = Thread.Mutex();
 #endif

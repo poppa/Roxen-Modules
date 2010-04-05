@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='utf-8'?>
+<page-components>      <tvab-blog-entry-component><id>comp:00004baf4b52:0000000052:10bc</id><variant>0</variant></tvab-blog-entry-component>      <header-component><id>comp:00004baf4b52:0000000053:10bc</id><variant>1</variant>
+<title></title><subtitle></subtitle></header-component>
+
+  <picture-component>
+    <id>comp:00004baf4b52:000000005b:10bc</id>
+    <variant>1</variant>
+    <title></title>
+    <subtitle></subtitle>
+    <text><p>This is a very short blog post!</p></text>
+    <picture-src></picture-src>
+    <picture-comment></picture-comment>
+    <picture-alt></picture-alt>
+    <picture-link></picture-link>
+    <picture-map></picture-map>
+  </picture-component>  <footer-component><id>comp:00004baf4b52:0000000054:10bc</id><variant>2</variant><revised>2010-03-28T16:41:14</revised><author>Administrator</author></footer-component></page-components>

@@ -41,6 +41,11 @@ inherit "module";
 #define GET_CACHE(KEY)            TWITTER->get_cache((KEY))
 #define DEL_CACHE(KEY)            TWITTER->delete_cache((KEY))
 
+#define SET_COOKIE() Roxen.set_cookie(id, "RoxenTwitter", encode_value(cookie))
+#define DEL_COOKIE() { cookie = ([]); Roxen.set_cookie(id, "RoxenTwitter", ""); }
+#define GET_COOKIE() id->cookies["RoxenTwitter"] && \
+                     decode_value( id->cookies["RoxenTwitter"] )
+
 constant thread_safe = 1;
 constant module_type = MODULE_TAG;
 constant module_name = "Poppa Tags: Twitter";
@@ -53,7 +58,7 @@ Configuration conf;
 
 void create(Configuration _conf)
 {
-  set_module_creator("Pontus Östlund <pontus@poppa.se>");
+  set_module_creator("Pontus &Ouml;stlund <pontus@poppa.se>");
 
   defvar("consumer_key",
          Variable.String("", 0, "Consumer key", "Default cosumer key"));
@@ -71,6 +76,7 @@ class TagTwitter
   inherit RXML.Tag;
 
   constant name = "twitter";
+  mapping cookie = ([]);
 
   mapping(string:RXML.Type) opt_arg_types = ([
     "cosumer-key"     : RXML.t_text(RXML.PEnt),
@@ -83,7 +89,7 @@ class TagTwitter
     this_module(), "TagTwitter", ({
       TagTwitterGetAccessToken(),
       TagTwitterGetAuthURL(),
-      TagEmitTwitterCall(),
+      TagEmitTwitterVerifyCredentials(),
       TagTwitterLogout()
     })
   );
@@ -103,37 +109,30 @@ class TagTwitter
 
       vars["is-authenticated"] = 0;
 
-      Social.OAuth.Consumer consumer;
-      Social.OAuth.Token token;
+      Security.OAuth.Consumer consumer;
+      Security.OAuth.Token token;
 
       string ck = args["consumer-key"]    || query("consumer_key");
       string cs = args["consumer-secret"] || query("consumer_secret");
 
-      consumer = Social.OAuth.Consumer(ck, cs);
+      consumer = Security.OAuth.Consumer(ck, cs);
+      token = Security.OAuth.Token(0, 0);
+      TWITTER = RoxenTwitter(consumer, token);
+      cookie = GET_COOKIE()||([]);
 
-      mixed cookie;
-      if ( cookie = id->cookies[auth_cookie] ) {
-	[string k, string s] = cookie/"\0";
-	token = Social.OAuth.Token(k, s);
-	vars["access-token-key"] = k;
-	vars["access-token-secret"] = s;
-	vars["is-authenticated"] = 1;
+      if (cookie->request_key && !cookie->access_key) {
+      	token = Security.OAuth.Token(cookie->request_key, cookie->request_secret);
+      	TWITTER->set_token(token);
+      	vars["request-token-key"]    = token->key;
+	vars["request-token-secret"] = token->secret;
       }
-
-      id->misc->twitter = RoxenTwitter(consumer, token);
-
-      string tkey, tsec;
-      if (token) {
-	TRACE("+++ Access token set\n");
-	id->misc->twitter->set_token(token);
-      }
-      else if ((tkey = TWITTER->get_cache("request-token-key")) &&
-	       (tsec = TWITTER->get_cache("request-token-secret")))
-      {
-	TRACE("+++ Request token set\n");
-	vars["request-token-key"]    = tkey;
-	vars["request-token-secret"] = tsec;
-	TWITTER->set_token(tkey, tsec);
+      else if (cookie->request_key && cookie->access_key) {
+      	token = Security.OAuth.Token(cookie->access_key, cookie->access_secret);
+      	TWITTER->set_token(token);
+      	TWITTER->set_is_authenticated(1);
+      	vars["access-token-key"] = token->key;
+      	vars["access-token-secret"] = token->secret;
+      	vars["is-authenticated"] = 1;
       }
 
       return 0;
@@ -141,6 +140,7 @@ class TagTwitter
 
     array do_return(RequestID id)
     {
+      SET_COOKIE();
       m_delete(id->misc, "twitter");
       result = content;
       vars = ([]);
@@ -163,13 +163,7 @@ class TagTwitter
       array do_return(RequestID id)
       {
 	TRACE("Request auth url\n");
-
-	DEL_CACHE("request-token-key");
-	DEL_CACHE("request-token-secret");
-	DEL_CACHE("access-token-key");
-	DEL_CACHE("access-token-secret");
-
-	Roxen.remove_cookie(id, auth_cookie, id->cookies[auth_cookie]||"" );
+	DEL_COOKIE();
 
 	string t;
 	if (mixed e = catch(t = TWITTER->get_auth_url())) {
@@ -177,9 +171,10 @@ class TagTwitter
 	  _ok = 0;
 	}
 	else {
-	  Social.OAuth.Token tok = TWITTER->get_token();
-	  SET_CACHE("request-token-key",    tok->key);
-	  SET_CACHE("request-token-secret", tok->secret);
+	  Security.OAuth.Token tok = TWITTER->get_token();
+	  cookie->request_key = tok->key;
+	  cookie->request_secret = tok->secret;
+	  SET_COOKIE();
 	  _ok    = 1;
 	  result = t;
 	}
@@ -203,16 +198,20 @@ class TagTwitter
       array do_return(RequestID id)
       {
 	TRACE("Get access token\n");
-	Social.OAuth.Token t;
+	Security.OAuth.Token t;
+	cookie = GET_COOKIE();
+	
+	if (!cookie)
+	  RXML.parse_error("No cookie! Serious error man!\n");
+	
 	if (mixed e = catch(t = TWITTER->get_access_token())) {
 	  TRACE("Request error: %s\n", describe_backtrace(e));
 	  _ok = 0;
 	}
 	else {
-	  Social.OAuth.Token tok = TWITTER->get_token();
-	  SET_CACHE("access-token-key",     t->key);
-	  SET_CACHE("access-token-secret",  t->secret);
-	  Roxen.set_cookie(id, auth_cookie, t->key+"\0"+t->secret);
+	  Security.OAuth.Token tok = TWITTER->get_token();
+	  cookie->access_key = tok->key;
+	  cookie->access_secret = tok->secret;
 	  _ok = 1;
 	}
 
@@ -236,73 +235,29 @@ class TagTwitter
       array do_return(RequestID id)
       {
 	TRACE("Logout\n");
-	DEL_CACHE("request-token-key");
-	DEL_CACHE("request-token-secret");
-	DEL_CACHE("access-token-key");
-	DEL_CACHE("access-token-secret");
-	Roxen.remove_cookie(id, auth_cookie, id->cookies[auth_cookie]||"" );
+	DEL_COOKIE();
 	return 0;
       }
     }
   }
 
-  class TagEmitTwitterCall
+  class TagEmitTwitterVerifyCredentials
   {
     inherit RXML.Tag;
     constant name = "emit";
-    constant plugin_name = "twitter-call";
+    constant plugin_name = "twitter-verify-credentials";
 
-    mapping(string:RXML.Type) req_arg_types = ([
-      "url" : RXML.t_text(RXML.PEnt)
-    ]);
-
-    mapping(string:RXML.Type) opt_arg_types = ([
-      "method"  : RXML.t_text(RXML.PEnt),
-      "nocache" : RXML.t_text(RXML.PEnt),
-      "cache"   : RXML.t_text(RXML.PEnt),
-      "debug"   : RXML.t_text(RXML.PEnt)
-    ]);
+    mapping(string:RXML.Type) req_arg_types = ([]);
+    mapping(string:RXML.Type) opt_arg_types = ([]);
 
     array get_dataset(mapping args, RequestID id)
     {
-      array  ret   = ({});
-      string method  = "GET";
-      int    cache   = args->cache && (int)args->cache;
-
-      if (args->nocache) cache = -1;
-
-      if (args->method) {
-	if ( !(< "GET", "POST" >)[upper_case(args->method)] ) {
-	  RXML.parse_error("Bad value to \"method\". Must be \"GET\" or "
-	                   "\"POST\"");
-	}
-	if (upper_case(args->method) == "POST")
-	  method = "POST";
+      Social.Twitter.User u;
+      if (mixed e = catch(u = TWITTER->verify_credentials())) {
+      	RXML.parse_error("Error: %s\n", describe_error(e));
       }
 
-      multiset skip = (< "source" >);
-      skip += (multiset)(indices(req_arg_types)+indices(opt_arg_types));
-
-      Social.OAuth.Params params = Social.OAuth.Params();
-
-      foreach (args; string key; mixed o)
-	if ( !skip[key] )
-	  params += Social.OAuth.Param(key, (string)o);
-
-      mixed res;
-      if (mixed e = catch(res = TWITTER->call(args->url,params,method,cache)))
-	RXML.parse_error("call() error: %s\n", describe_error(e));
-
-      if (args->debug)
-	report_debug("Result is: %O\n", res);
-
-      if (res[0..4] == "<?xml") {
-	Social.Twitter.Response resp = TWITTER->Response(res);
-	string fk = indices(resp)[0];
-	ret = ({ resp[fk] });
-      }
-
-      return ret;
+      return ({ (mapping)u });
     }
   }
 }
@@ -311,12 +266,29 @@ private mapping(string:object) twcache = ([]);
 
 class RoxenTwitter
 {
-  inherit Social.Twitter;
+  inherit Social.Twitter.Api;
 
-  void create(Social.OAuth.Consumer consumer, Social.OAuth.Token token)
+  DataCache cache;
+
+  void create(Security.OAuth.Consumer consumer, Security.OAuth.Token token)
   {
     ::create(consumer, token);
     cache = DataCache();
+  }
+
+  mixed get_cache(string key)
+  {
+    return cache->get(key);
+  }
+  
+  void set_cache(string key, mixed val, int|void expires)
+  {
+    cache->set(key, val, expires);
+  }
+  
+  void delete_cache(string key)
+  {
+    cache->delete(key);
   }
 
   class DataCache

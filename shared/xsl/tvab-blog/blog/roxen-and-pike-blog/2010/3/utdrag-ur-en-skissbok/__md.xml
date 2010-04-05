@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<files>
+  <file name="index.xml">
+    <__export-encoding>iso-8859-1</__export-encoding>
+    <title>Utdrag ur en skissbok</title>
+    <keywords>Pike, Skissbok</keywords>
+    <description></description>
+    <uuid>b880b168-0000-4000-a4dc-000094bbd7c5</uuid>
+    <http-content-type>sitebuilder/xml-page-editor</http-content-type>
+    <template>cms-common.xsl</template>
+    <stationery></stationery>
+    <category>categories.xml!1269689966-0</category>
+    <external_use type="pike64">tmtlMKAoOA==</external_use>
+    <notify type="int">0</notify>
+    <author>2</author>
+  </file>
+  <file name="grafisk-profil.jpg">
+    <__export-encoding>iso-8859-1</__export-encoding>
+    <title></title>
+    <keywords></keywords>
+    <description></description>
+    <uuid>56c252fc-0000-4000-9628-00006dda0228</uuid>
+    <http-content-type>image/jpeg</http-content-type>
+    <convert-content-type></convert-content-type>
+    <stationery></stationery>
+    <category></category>
+    <external_use type="pike64">tmtlMKAoOA==</external_use>
+    <notify type="int">0</notify>
+    <author>2</author>
+  </file>
+  <dir>
+    <__export-encoding type="int">0</__export-encoding>
+    <uuid>5088c358-0000-4000-8f8c-0000643d9fc6</uuid>
+  </dir>
+</files>

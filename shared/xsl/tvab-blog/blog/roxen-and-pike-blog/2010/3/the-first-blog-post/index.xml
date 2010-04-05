@@ -1,0 +1,26 @@
+<?xml version='1.0' encoding='utf-8'?>
+<page-components>            <tvab-blog-entry-component><id>comp:00004badee6a:000000006d:3163</id><variant>0</variant></tvab-blog-entry-component>            <header-component><id>comp:00004badee6a:000000006e:3163</id><variant>1</variant>
+<title></title><subtitle></subtitle></header-component>
+
+  <picture-component>
+    <id>comp:00004badee6a:000000007e:3163</id>
+    <variant>1</variant>
+    <title></title>
+    <subtitle></subtitle>
+    <text><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris eu nibh sapien. Nam bibendum, mi vel commodo bibendum, diam est iaculis neque, a porttitor dui mauris vel metus. Donec lorem turpis, auctor non malesuada ut, rhoncus quis elit. Ut tempor pharetra nisl, ut gravida nisi rutrum ut. Curabitur pellentesque vestibulum dolor at ullamcorper. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Vivamus eu urna ut sapien auctor feugiat at id ligula. Donec auctor ipsum sit amet mauris semper non rutrum justo scelerisque.</p>
+<p>Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Phasellus placerat orci ut felis feugiat mattis. Nam malesuada, est quis fringilla dignissim, quam enim tincidunt justo, vitae pellentesque justo augue ac leo. Ut enim diam, lobortis quis dapibus ac, aliquet in arcu. Nullam et justo sit amet risus fringilla elementum. Proin id vulputate ipsum. Aliquam sit amet dolor libero, ut suscipit erat. Donec tempus tellus mollis felis sodales in scelerisque mauris lobortis. Quisque rhoncus tellus in dui tristique quis rhoncus lacus tincidunt. Fusce malesuada hendrerit lacinia. Nulla facilisi.</p></text>
+    <picture-src></picture-src>
+    <picture-comment></picture-comment>
+    <picture-alt></picture-alt>
+    <picture-link></picture-link>
+    <picture-map></picture-map>
+  </picture-component>
+
+  <href-component>
+    <id>comp:00004baf4b52:0000000037:10bc</id>
+    <variant>0</variant>
+    <link>http://poppa.se</link>
+    <target>_self</target>
+    <description>Pontus Östlunds webbplats</description>
+    <auto-hide>0</auto-hide>
+  </href-component>  <footer-component><id>comp:00004badee6a:000000006f:3163</id><variant>2</variant><revised>2010-03-28T14:58:16</revised><author>Administrator</author></footer-component></page-components>

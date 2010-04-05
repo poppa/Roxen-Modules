@@ -48,7 +48,7 @@ Configuration conf;
 
 void create(Configuration _conf)
 {
-  set_module_creator("Pontus Östlund <pontus@poppa.se>");
+  set_module_creator("Pontus &Ouml;stlund <pontus@poppa.se>");
   conf = _conf;
 
   defvar("bitly_login", Variable.String(
@@ -207,8 +207,12 @@ class TagBitly
 	else
 	  report_error("Unable to query Bitly.expand()!\n");
       }
+      
+      string s = content;
+      if (!sizeof(s))
+      	s = url||"";
 
-      result = sprintf("<a href=%O>%s</a>", url, content||url||"");
+      result = sprintf("<a href=%O>%s</a>", url, s);
 
       return 0;
     }

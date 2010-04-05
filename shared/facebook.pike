@@ -287,6 +287,8 @@ class TagFacebook
 
 	if (args->clear) msg = 0;
 
+	_ok = 1;
+
 	Social.Facebook.Response r;
 	if (mixed e = catch(r = FB->set_status(msg, args["includes-verb"],
 	                                       args->uid)))
@@ -296,8 +298,12 @@ class TagFacebook
 	  return 0;
 	}
 
-	TRACE("Set status response: %O\n", r && r->raw_xml);
-	_ok = 1;
+	mapping resp = response_to_mapping(r, ([]));
+
+	if (resp->error_code) {
+	  _ok = 0;
+	  RXML.user_set_var("var.fb-error", resp->error_msg);
+	}
 
 	return 0;
       }
@@ -416,17 +422,28 @@ mapping decode_cookie(string v)
   return decode_value(MIME.decode_base64(v));
 }
 
-void response_to_mapping(Social.Facebook.Response o, mapping m)
+mapping response_to_mapping(Social.Facebook.Response o, mapping m)
 {
   foreach ((array)o, Social.Facebook.Response child) {
     string n = child->get_name();
     if (sizeof(child)) {
-      m[n] = ([]);
-      response_to_mapping(child, m[n]);
+      if ( m[n] )  {
+      	if (!arrayp( m[n] ))
+      	  m[n] = ({ m[n] });
+
+      	m[n] += ({ response_to_mapping(child, ([])) });
+      }
+      else {
+	m[n] = ([]);
+	response_to_mapping(child, m[n]);
+      }
     }
-    else
+    else {
       m[n] = child->get_value();
+    }
   }
+  
+  return m;
 }
 
 string make_cache_key(string name, mapping args)
