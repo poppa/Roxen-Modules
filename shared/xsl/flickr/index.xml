@@ -1,0 +1,18 @@
+<?xml version='1.0'?>
+<page-components>
+
+  <header-component>
+    <variant>0</variant>
+    <title></title>
+    <subtitle></subtitle>
+    <id>comp:00004bbcea43:0000000000:4127</id>
+  </header-component>
+
+  <footer-component>
+    <variant>0</variant>
+    <revised></revised>
+    <author></author>
+    <id>comp:00004bbcea43:0000000001:4127</id>
+  </footer-component>
+
+</page-components>

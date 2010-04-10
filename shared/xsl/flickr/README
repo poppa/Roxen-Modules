@@ -1,0 +1,6 @@
+When you have the Roxen module "flickr.pike" loaded put all these files in a 
+directory in Roxen CMS. The example will show Photosets of the authenticated
+Flickr user. In common.xsl there's also an example of how to list the most
+recent public photos.
+
+No paths should need to be altered in the example.
