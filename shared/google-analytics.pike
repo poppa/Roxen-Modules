@@ -65,7 +65,7 @@ void create(Configuration _conf) // {{{
     Variable.DatabaseChoice(
       "google_" + (_conf ? Roxen.short_name(_conf->name):""), 0,
       "Googledatabas",
-      "Databas f�r att lagra Google-relaterad data"
+      "Databas f?r att lagra Google-relaterad data"
     )->set_configuration_pointer(my_configuration)
   );
 } // }}}
@@ -227,7 +227,7 @@ class TagEmitGoogleAnalytics // {{{
       };
 
       if (e) {
-      	RXML.run_error("Error when fetching data!\n", describe_error(e));
+      	RXML.run_error("Error when fetching data: %s\n", describe_error(e));
       	return ({});
       }
     }

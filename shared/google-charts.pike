@@ -1,5 +1,5 @@
 /* -*- Mode: Pike; indent-tabs-mode: t; c-basic-offset: 2; tab-width: 8 -*- */
-//! @b{Google Analytics@}
+//! @b{Google Charts@}
 //!
 //! Copyright © 2010, Pontus Östlund - @url{www.poppa.se@}
 //!
@@ -44,7 +44,7 @@ import WS.Google;
 
 void create(Configuration _conf) // {{{
 {
-  set_module_creator("Pontus �stlund <pontus@poppa.se>");
+  set_module_creator("Pontus &Ouml;stlund <pontus@poppa.se>");
 } // }}}
 
 void start(int when, Configuration _conf) {}

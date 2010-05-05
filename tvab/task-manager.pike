@@ -74,6 +74,18 @@ constant TASK_RESOLUTION = ([
 /**
  * Utility stuff
  */
+ 
+User get_tm_user(string|int handle) // {{{
+{
+  SqlResult r;
+  if (stringp(handle))
+    r = q("SELECT * FROM `user` WHERE username=%s", handle);
+  else
+    r = q("SELECT * FROM `user` WHERE id=%d", handle);
+
+  return r && sizeof(r) && User()->set_from_sql( r[0] );
+} // }}}
+ 
 array(KeyValueField) get_key_value_fields(string group) // {{{
 {
   SqlResult r = q("SELECT * FROM `field` WHERE `group`=%s ORDER BY `order`", 
@@ -94,6 +106,20 @@ KeyValueField get_key_value_field_from_id(int id) // {{{
   return 0;
 } // }}}
 
+string sql_quote(string|int value) // {{{
+{
+  if (intp(value))
+    return (string)value;
+
+  return "'" + DB.Sql.quote(value) + "'";
+} // }}}
+
+#define SQL_INT    DB.Sql.Int
+#define SQL_FLOAT  DB.Sql.Float
+#define SQL_STRING DB.Sql.String
+#define SQL_ENUM   DB.Sql.Enum
+#define SQL_DATE   DB.Sql.Date
+
 class ATaskManager // {{{
 {
   object_program set_from_sql(SqlRow sqlrow);
@@ -105,12 +131,12 @@ class KeyValueField // {{{
 {
   inherit ATaskManager;
 
-  DB.Sql.Int    id         = DB.Sql.Int("id");
-  DB.Sql.String index      = DB.Sql.String("index");
-  DB.Sql.String value      = DB.Sql.String("value");
-  DB.Sql.Int    order      = DB.Sql.Int("order");
-  DB.Sql.Enum   is_default = DB.Sql.Enum("default", (< "y","n" >), "n");
-  DB.Sql.String group      = DB.Sql.String("group");
+  SQL_INT    id         = SQL_INT("id");
+  SQL_STRING index      = SQL_STRING("index");
+  SQL_STRING value      = SQL_STRING("value");
+  SQL_INT    order      = SQL_INT("order");
+  SQL_ENUM   is_default = SQL_ENUM("default", (< "y","n" >), "n");
+  SQL_STRING group      = SQL_STRING("group");
 
   void create(int|void _id, string|void _index, string|void _value,
               int|void _order, string|void _is_default, string|void _group)
@@ -242,6 +268,103 @@ class KeyValueField // {{{
   string _sprintf(int t)
   {
     return t == 'O' && sprintf("%O(\"%s\", \"%s\")", THIS_OBJECT, index, value);
+  }
+} // }}}
+
+class User // {{{
+{
+  inherit ATaskManager;
+
+  SQL_INT id          = SQL_INT("id");
+  SQL_STRING username = SQL_STRING("username");
+  SQL_STRING fullname = SQL_STRING("fullname");
+  SQL_STRING email    = SQL_STRING("email");
+
+  void create(int|void _id, string|void _username, string|void _fullname,
+              string|void _email)
+  {
+    id->set(_id);
+    username->set(_username);
+    fullname->set(_fullname);
+    email->set(_email);
+  }
+
+  object_program set_from_sql(SqlRow sqlrow)
+  {
+    id->set(sqlrow->id);
+    username->set(sqlrow->username);
+    fullname->set(sqlrow->fullname);
+    email->set(sqlrow->email);
+    return this;
+  }
+
+  int get_id()
+  {
+    return (int)id;
+  }
+
+  string get_username()
+  {
+    return (string)username;
+  }
+
+  string get_fullname()
+  {
+    return (string)fullname;
+  }
+  
+  string get_email()
+  {
+    return (string)email;
+  }
+
+  int(0..1) `==(object_program other)
+  {
+    return (TYPEOF_SELF(other) || INHERITS_THIS(other)) &&
+           (int)id          == other->get_id()          &&
+           (string)username == other->get_username()    &&
+           (string)fullname == other->get_fullname()    &&
+           (string)email    == other->get_email();
+  }
+
+  object_program save()
+  {
+    string sql;
+    // Add
+    if ((int)id < 1) {
+      sql = "INSERT INTO `user` (username, fullname, email) VALUES (%s)";
+      Sql.Sql db = get_db();
+      db->query(sprintf(sql, ({ username,fullname,email })->get_quoted()*","));
+      id->set(db->master_sql->insert_id());
+    }
+    // Update
+    else {
+      sql = "UPDATE `user` SET " + ({ username,fullname,email })->get()*"," + 
+            " WHERE id=%d";
+      q(sprintf(sql, id));
+    }
+
+    return this;
+  }
+  
+  int(0..1) delete()
+  {
+    string sql = "DELETE FROM `user` WHERE id=%d";
+    Sql.Sql db = get_db();
+    db->query(sql, (int)id);
+    /*
+    sql = "DELETE FROM project_member WHERE user_id=%d";
+    db->query(sql, (int)id);
+    sql = "UPDATE ticket SET owner=NULL WHERE owner=%s";
+    db->query(sql, (string)username);
+    */
+    return 1;
+  }
+
+  string _sprintf(int t)
+  {
+    return sprintf("%O(%O, \"%s\", \"%s\", \"%s\")", THIS_OBJECT,
+                   id->get_value(), username, fullname, email);
   }
 } // }}}
 
@@ -417,6 +540,451 @@ class TagTMDeleteField // {{{
   }
 } // }}}
 
+class TagEmitTMUser // {{{
+{
+  inherit RXML.Tag;
+  constant name = "emit";
+  constant plugin_name = "tm-user";
+
+  mapping(string:RXML.Type) req_arg_types = ([]);
+
+  mapping(string:RXML.Type) opt_arg_types = ([
+    "id" : RXML.t_text(RXML.PEnt),
+    "username" : RXML.t_text(RXML.PEnt)
+  ]);
+
+  array get_dataset(mapping args, RequestID id)
+  {
+    string sql = "SELECT * FROM `user`";
+
+    if (args->id)
+      sql += " WHERE id='" + QUOTE_SQL(args->id) + "'";
+    else if (args->username)
+      sql += " WHERE username='" + QUOTE_SQL(args->username) + "'";
+
+    sql += " ORDER BY `fullname`";
+
+    return q(sql)||({});
+  }
+} // }}}
+
+class TagEmitTMUserSearch // {{{
+{
+  inherit RXML.Tag;
+  constant name = "emit";
+  constant plugin_name = "tm-user-search";
+
+  mapping(string:RXML.Type) req_arg_types = ([
+    "find" : RXML.t_text(RXML.PEnt)
+  ]);
+
+  array get_dataset(mapping args, RequestID id)
+  {
+    array ret = ({});
+    string rxml = sprintf(
+      "<emit source='ac-identities' search='%s'>" 
+      "&_.name;\1&_.fullname;\1&_.id;\1&_.type;\1&_.zone-id;"
+      "<delimiter>\0</delimiter></emit>",
+      args->find
+    );
+
+    string res = Roxen.parse_rxml(rxml, id);
+    if (!sizeof(res))
+      return ret;
+
+    array r = res/"\0";
+    foreach (r, string u) {
+      [string un, string fn, string uid, string ut, string uz] = u/"\1";
+
+      // Skip already added user, skip groups
+      if (get_tm_user(un) || ut != "user")
+      	continue;
+
+      mapping m = ([
+	"name"     : un,
+	"fullname" : fn,
+	"id"       : uid,
+	"type"     : ut,
+	"zone-id"  : uz
+      ]);
+
+      rxml = 
+      "<emit source='ac-identity-extras' identity='%s'>"
+      "&_.firstname;\1&_.lastname;\1&_.email;"
+      "</emit>";
+
+      res = Roxen.parse_rxml(sprintf(rxml, m->name), id);
+      if (sizeof(res)) {
+      	[un, fn, ut] = res/"\1";
+      	m->firstname = un;
+      	m->lastname  = fn;
+      	m->email     = ut;
+      }
+
+      ret += ({ m });
+    }
+
+    return ret;
+  }
+} // }}}
+
+class TagTMAddUser // {{{
+{
+  inherit RXML.Tag;
+  constant name = "tm-add-user";
+
+  mapping(string:RXML.Type) req_arg_types = ([
+    "username" : RXML.t_text(RXML.PEnt),
+    "fullname" : RXML.t_text(RXML.PEnt),
+    "email"    : RXML.t_text(RXML.PEnt)
+  ]);
+
+  class Frame
+  {
+    inherit RXML.Frame;
+
+    array do_return(RequestID id)
+    {
+      _ok = 1;
+      User u = User(0, args->username, args->fullname, args->email);
+      if (!u->save()) _ok = 0;
+      return 0;
+    }
+  }
+} // }}}
+
+class TagTMEditUser // {{{
+{
+  inherit RXML.Tag;
+  constant name = "tm-edit-user";
+
+  mapping(string:RXML.Type) req_arg_types = ([
+    "id"       : RXML.t_text(RXML.PEnt),
+    "username" : RXML.t_text(RXML.PEnt),
+    "fullname" : RXML.t_text(RXML.PEnt),
+    "email"    : RXML.t_text(RXML.PEnt)
+  ]);
+
+  class Frame
+  {
+    inherit RXML.Frame;
+
+    array do_return(RequestID id)
+    {
+      _ok = 1;
+      User u = get_tm_user((int)args->id);
+
+      if (!u) {
+      	_ok = 0;
+      	return 0;
+      }
+
+      u->username->set(args->username);
+      u->fullname->set(args->fullname);
+      u->email->set(args->email);
+
+      if (!u->save()) _ok = 0;
+
+      return 0;
+    }
+  }
+} // }}}
+
+class TagTMDeleteUser // {{{
+{
+  inherit RXML.Tag;
+  constant name = "tm-delete-user";
+
+  mapping(string:RXML.Type) req_arg_types = ([
+    "id" : RXML.t_text(RXML.PEnt)
+  ]);
+
+  class Frame
+  {
+    inherit RXML.Frame;
+
+    array do_return(RequestID id)
+    {
+      _ok = 1;
+      User u = get_tm_user((int)args->id);
+      if (!u || !u->delete()) _ok = 0;
+      return 0;
+    }
+  }
+} // }}}
+
+class TagTMAddTask // {{{
+{
+  inherit RXML.Tag;
+  constant name = "tm-add-task";
+
+  mapping(string:RXML.Type) req_arg_types = ([
+    "title"       : RXML.t_text(RXML.PEnt),
+    "description" : RXML.t_text(RXML.PEnt),
+    "reporter"    : RXML.t_text(RXML.PEnt),
+    "type"        : RXML.t_text(RXML.PEnt)
+  ]);
+  
+  mapping(string:RXML.Type) opt_arg_types = ([
+    "priority" : RXML.t_text(RXML.PEnt),
+    "owner"    : RXML.t_text(RXML.PEnt),
+    "biller"   : RXML.t_text(RXML.PEnt),
+    "due-date" : RXML.t_text(RXML.PEnt),
+    "mysql-id" : RXML.t_text(RXML.PEnt)
+  ]);
+
+  class Frame
+  {
+    inherit RXML.Frame;
+
+    array do_return(RequestID id)
+    {
+      _ok = 1;
+      
+      array(DB.Sql.Field) flds = ({
+      	SQL_STRING("title",       args->title),
+      	SQL_STRING("description", args->description),
+      	SQL_STRING("reporter",    args->reporter),
+      	SQL_INT("type",           (int)args->type),
+      	SQL_INT("priority",       (int)args->priority),
+      	SQL_STRING("owner",       args->owner),
+      	SQL_STRING("biller",      args->biller),
+      	SQL_DATE("due_date",      args["due-date"] ),
+      	SQL_DATE("date_added",    "NOW()")
+      });
+
+      string sql = sprintf("INSERT INTO `task` (%s) VALUES (%s)",
+                           flds->get_quoted_name()*",",
+                           flds->get_quoted()*",");
+
+      Sql.Sql db = get_db();
+      mixed e = catch {
+      	db->query(sql);
+      	if ( args["mysql-id"] )
+      	  RXML.user_set_var(args["mysql-id"], db->master_sql->insert_id());
+      };
+
+      if (e) {
+      	TRACE("Error: %s\n", describe_backtrace(e));
+      	RXML_ERROR(describe_error(e));
+      }
+
+      return 0;
+    }
+  }
+} // }}}
+
+class TagTMAddAttachment // {{{
+{
+  inherit RXML.Tag;
+  constant name = "tm-add-attachment";
+
+  mapping(string:RXML.Type) req_arg_types = ([
+    "id"          : RXML.t_text(RXML.PEnt),
+    "type"        : RXML.t_text(RXML.PEnt),
+    "file-prefix" : RXML.t_text(RXML.PEnt)
+  ]);
+
+  mapping(string:RXML.Type) opt_arg_types = ([
+    "description-prefix" : RXML.t_text(RXML.PEnt)
+  ]);
+
+  class Frame
+  {
+    inherit RXML.Frame;
+
+    array do_return(RequestID id)
+    {
+      _ok = 1;
+
+      if (!sizeof(args->id))
+      	RXML.parse_error("Required argument \"id\" is empty!\n");
+
+      if ( !(< "task", "message" >)[args->type] )
+      	RXML.parse_error("Type attribute must be \"task\" or \"message\"!");
+
+      array(mapping) files = ({});
+      string fp = args["file-prefix"] + "*";
+      string dp = args["description-prefix"];
+
+      foreach (indices(id->variables), string k) {
+      	if (glob(fp, k)) {
+      	  if (search(k, ".") > -1) continue;
+      	  sscanf(k, fp + "%d", int|string idx);
+      	  idx = (string)idx;
+      	  mapping m = ([]);
+      	  m->contents = id->variables[k];
+      	  m->mimetype = id->variables[k + ".mimetype"];
+      	  m->filename = id->variables[k + ".filename"];
+      	  m->filesize = sizeof(m->contents);
+
+      	  if (dp)
+      	    m->description = id->variables[dp+idx];
+
+      	  files += ({ m });
+      	}
+      }
+
+      foreach (files, mapping m) {
+      	array(DB.Sql.Field) flds = ({
+      	  SQL_INT(args->type + "_id", args->id),
+      	  SQL_STRING("filename",      m->filename),
+      	  SQL_STRING("mimetype",      m->mimetype),
+      	  SQL_STRING("description",   m->description),
+      	  SQL_STRING("content",       m->contents),
+      	  SQL_INT("filesize",         m->filesize),
+      	  SQL_DATE("mtime",           "NOW()")
+	});
+
+	string sql = sprintf("INSERT INTO `attachment` (%s) VALUES (%s)",
+	                     flds->get_quoted_name()*",",
+	                     flds->get_quoted()*",");
+
+	if (mixed e = catch(q(sql))) {
+	  _ok = 0;
+	  report_debug("SQL Error: %s\n", describe_backtrace(e));
+	}
+      }
+
+      return 0;
+    }
+  }
+} // }}}
+
+class TagEmitTMAttachment // {{{
+{
+  inherit RXML.Tag;
+  constant name = "emit";
+  constant plugin_name = "tm-attachment";
+
+  mapping(string:RXML.Type) opt_arg_types = ([
+    "id" : RXML.t_text(RXML.PEnt),
+    "task-id" : RXML.t_text(RXML.PEnt),
+    "message-id" : RXML.t_text(RXML.PEnt)
+  ]);
+
+  mapping(string:RXML.Type) req_arg_types = ([]);
+
+  array get_dataset(mapping args, RequestID id)
+  {
+    string tbl;
+    if (args->id) 
+      tbl = "attachment";
+    if ( args["task-id"] )
+      tbl = "task";
+    else if ( args["message-id"] )
+      tbl = "message";
+
+    if (!tbl || EMPTY(tbl)) {
+      RXML.parse_error("Missing required argument \"id\" or \"task-id\" or "
+                       "\"message-id\"!\n");
+    }
+
+    SqlResult res;
+    string sql = "SELECT * FROM attachment WHERE ";
+    if (args->id)
+      res = q(sql + "id=%d", (int)args->id);
+    else if ( args["task-id"] )
+      res = q(sql + "task_id=%d", (int)args["task-id"] );
+    else if ( args["message-id"] )
+      res = q(sql + "message-id=%d", (int)args["message-id"] );
+
+    return res;
+  }
+} // }}}
+
+class TagEmitTMTask // {{{
+{
+  inherit RXML.Tag;
+  constant name = "emit";
+  constant plugin_name = "tm-task";
+
+  mapping(string:RXML.Type) req_arg_types = ([
+  ]);
+
+  mapping(string:RXML.Type) opt_arg_types = ([
+    "id"         : RXML.t_text(RXML.PEnt),
+    "reporter"   : RXML.t_text(RXML.PEnt),
+    "owner"      : RXML.t_text(RXML.PEnt),
+    "biller"     : RXML.t_text(RXML.PEnt),
+    "resolution" : RXML.t_text(RXML.PEnt),
+    "type"       : RXML.t_text(RXML.PEnt),
+    "priority"   : RXML.t_text(RXML.PEnt),
+    "accepted"   : RXML.t_text(RXML.PEnt),
+    "page"       : RXML.t_text(RXML.PEnt),
+    "per-page"   : RXML.t_text(RXML.PEnt),
+    "order-by"   : RXML.t_text(RXML.PEnt)
+  ]);
+
+  array(string) where_clauses = ({ "reporter", "owner", "biller", "resolution",
+                                   "type", "priority", "accepted" });
+
+  array get_dataset(mapping args, RequestID id)
+  {
+    string sql = #"
+    SELECT t1.id AS id, t1.reporter AS reporter, t1.title AS title,
+           t1.description AS description, t1.date_added AS date_added,
+           t1.due_date AS due_date, t1.accepted AS accepted,
+           t1.biller AS biller, t1.type AS type, t1.priority AS priority,
+           t1.resolution AS resolution, t1.owner AS owner,
+           t2.fullname AS owner_fullname, t2.email AS owner_email
+    FROM `task` t1
+    LEFT JOIN `user` t2 on t1.owner = t2.username ";
+
+    if (!EMPTY(args->id)) {
+      sql += "WHERE t1.id=" + QUOTE_SQL(args->id);
+    }
+    else {
+      array wheres = ({});
+      foreach (where_clauses, string where)
+      	if (!EMPTY( args[where] ))
+	  wheres += ({ "t1." + where + "=" + sql_quote( args[where] ) });
+
+      if (sizeof(wheres))
+	sql += "WHERE " + (wheres*" AND ");
+
+
+      if ( args["order-by"] )
+	sql += "";
+      else
+	sql += " ORDER BY t1.date_added DESC";
+      
+      if (!EMPTY( args["per-page"] )) {
+      	int from = (int)args->page * (int)args["per-page"];
+      	sql += sprintf( " LIMIT %d, %s", from, args["per-page"] );
+      }
+    }
+
+    //TRACE("SQL: %s\n", sql);
+
+    SqlResult res;
+    if (mixed e = catch(res = q(sql))) {
+      TRACE("QUERY ERROR: %s\n", describe_backtrace(e));
+      RXML_ERROR(describe_error(e));
+      return ({});
+    }
+
+    //TRACE("RESULT: %O\n", res);
+
+    return res;
+  }
+} // }}}
+
+class TagIfTMUser // {{{
+{
+  inherit RXML.Tag;
+
+  constant name = "if";
+  constant plugin_name = "tm-user";
+
+  mapping(string:RXML.Type) opt_arg_types = ([
+  ]);
+
+  int eval(string a, RequestID id, mapping args)
+  {
+    return !!get_tm_user(a);
+  }
+} // }}}
 
 /**
  * Module API 
@@ -460,16 +1028,6 @@ Sql.Sql get_db() // {{{
   return DBManager.get(db_name, conf);
 } // }}}
 
-string quote_sql(mixed value) // {{{
-{
-  if (arrayp(value))
-    value = value*",";
-  else if (intp(value))
-    return "'" + (string)value + "'";
-
-  return "'" + DB.Sql.quote((string)value) + "'";
-} // }}}
-
 void init_db() // {{{
 {
   if (db_name == " none") return;
@@ -510,58 +1068,79 @@ void init_db() // {{{
 void setup_tables() // {{{
 {
   q(#"CREATE TABLE IF NOT EXISTS `user` (
-    `id`           INT NOT NULL AUTO_INCREMENT,
-    `username`     VARCHAR(45) NULL,
-    `fullname`     VARCHAR(255) NULL,
-    `email`        VARCHAR(255) NULL,
+    `id` INT NOT NULL AUTO_INCREMENT,
+    `username` VARCHAR(45) NULL,
+    `fullname` VARCHAR(255) NULL,
+    `email` VARCHAR(255) NULL,
     PRIMARY KEY (`id`))
     ENGINE = MyISAM");
 
-  /*
-  q(#"CREATE  TABLE IF NOT EXISTS `project_member` (
-    `user_id`      INT NOT NULL,
-    `project_id`   INT NOT NULL,
-    `role`         ENUM('admin','member') NOT NULL DEFAULT 'member')
-    ENGINE = MyISAM");
-  */
-
-  q(#"CREATE  TABLE IF NOT EXISTS `field` (
-    `id`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `index`        VARCHAR(45) NULL,
-    `value`        VARCHAR(100) NULL,
-    `order`        TINYINT NULL DEFAULT -1,
-    `default`      ENUM('y','n') NULL DEFAULT 'n',
-    `group`        VARCHAR(45) NULL,
+  q(#"CREATE TABLE IF NOT EXISTS `field` (
+    `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `index` VARCHAR(45) NULL,
+    `value` VARCHAR(100) NULL,
+    `order` TINYINT NULL DEFAULT -1,
+    `default` ENUM('y','n') NULL DEFAULT 'n',
+    `group` VARCHAR(45) NULL,
     PRIMARY KEY (`id`))
     ENGINE = MyISAM");
-/*
-  q(#"CREATE  TABLE IF NOT EXISTS `ticket` (
-    `id`           INT ZEROFILL UNSIGNED NOT NULL AUTO_INCREMENT,
-    `project_id`   INT NULL,
-    `deleted`      ENUM('y','n') NULL DEFAULT 'n',
-    `date_created` DATETIME NOT NULL,
-    `date_edited`  DATETIME NULL,
-    `owner`        VARCHAR(45) NULL,
-    `reporter`     VARCHAR(255) NOT NULL,
-    `summary`      VARCHAR(255) NULL,
-    `text`         TEXT NULL,
-    `resolution`   INT NULL,
-    `type`         INT NULL,
-    `priority`     INT NULL,
-    `accepted`     ENUM('y','n') NULL DEFAULT 'n',
-    PRIMARY KEY (`id`)) 
+
+  q(#"CREATE TABLE IF NOT EXISTS `task` (
+    `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `reporter` VARCHAR(255) NULL,
+    `title` VARCHAR(255) NULL,
+    `description` TEXT NULL,
+    `date_added` DATETIME NULL,
+    `due_date` DATETIME NULL,
+    `type` INT NULL,
+    `priority` INT NULL,
+    `resolution` INT NULL,
+    `owner` VARCHAR(45) NULL,
+    `accepted` ENUM('y','n') NULL DEFAULT 'n',
+    `biller` VARCHAR(255) NULL,
+    PRIMARY KEY (`id`))
     ENGINE = MyISAM");
-  
-  if (!sizeof(q("DESCRIBE ticket accepted"))) {
-    report_notice("No \"accepted\" column in `ticket`! Adding...");
-    q("ALTER TABLE ticket ADD accepted ENUM('y','n') NULL DEFAULT 'n'");
-  }
-*/
-  //DBManager.is_module_table(this_object(), db_name, "project",        0);
-  DBManager.is_module_table(this_object(), db_name, "user",           0);
-  //DBManager.is_module_table(this_object(), db_name, "project_member", 0);
-  DBManager.is_module_table(this_object(), db_name, "field",          0);
-  //DBManager.is_module_table(this_object(), db_name, "ticket",         0);
+
+  q(#"CREATE TABLE IF NOT EXISTS `timetrack` (
+    `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `task_id` INT UNSIGNED NOT NULL,
+    `username` VARCHAR(255) NULL,
+    `date_added` DATETIME NULL,
+    `minutes` INT NULL,
+    `billable` ENUM('y','n') NULL DEFAULT 'y',
+    PRIMARY KEY (`id`))
+    ENGINE = MyISAM");
+
+  q(#"CREATE TABLE IF NOT EXISTS `attachment` (
+    `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `task_id` INT UNSIGNED NOT NULL,
+    `filename` VARCHAR(255) NULL,
+    `mimetype` VARCHAR(255) NULL,
+    `description` VARCHAR(255) NULL,
+    `filesize` INT NULL,
+    `mtime` DATETIME NULL,
+    `content` LONGBLOB NULL,
+    `message_id` INT UNSIGNED NOT NULL,
+    PRIMARY KEY (`id`))
+    ENGINE = MyISAM");
+
+  q(#"CREATE TABLE IF NOT EXISTS `message` (
+    `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `task_id` INT UNSIGNED NOT NULL,
+    `date_added` DATETIME NULL,
+    `username` VARCHAR(255) NULL,
+    `fullname` VARCHAR(255) NULL,
+    `email` VARCHAR(255) NULL,
+    `message` TEXT NULL,
+    PRIMARY KEY (`id`))
+    ENGINE = MyISAM");
+
+  DBManager.is_module_table(this_object(), db_name, "user",       0);
+  DBManager.is_module_table(this_object(), db_name, "field",      0);
+  DBManager.is_module_table(this_object(), db_name, "task",       0);
+  DBManager.is_module_table(this_object(), db_name, "timetrack",  0);
+  DBManager.is_module_table(this_object(), db_name, "attachment", 0);
+  DBManager.is_module_table(this_object(), db_name, "message",    0);
 
   /* Add some defaults */
 
