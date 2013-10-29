@@ -1,8 +1,0 @@
-<?xml version='1.0' encoding='utf-8'?>
-<page-components>    <header-component><id>comp:00004badee6a:0000000065:3163</id><variant>1</variant>
-<title>March 2010</title>
-<subtitle></subtitle></header-component>
-
-	  <tvab-blog-archive-component><id>comp:00004badee6a:0000000064:3163</id><variant>1</variant></tvab-blog-archive-component>
-
-	  <footer-component><id>comp:00004badee6a:0000000066:3163</id><variant>0</variant><revised></revised><author></author></footer-component></page-components>

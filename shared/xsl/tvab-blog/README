@@ -1,9 +1,0 @@
-The files in **global-templates** is assumed to be put in 
-`/assets/xsl/tvab-blog/` but can of course be put somewhere else if the 
-include paths in **`blog-imports.xsl`** is changed accordingly. 
-
-The files in **blog** is assumed to be put in `/blog/` but can of course be
-put somewhere else if the customizable parameter `blog-base` in 
-**`blog.config.xsl`**  is altered accordingly. If the files in
-**global-templates** is put elsewhere some `xsl:imports` in 
-**`blog.config.xsl`** and **`cms-components.xsl`** must be altered accordingly.
