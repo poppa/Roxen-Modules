@@ -7,6 +7,7 @@
 
   Adds the X-UA-Compatible header to Internet Explorer.
 */
+
 #charset utf-8
 #include <config.h>
 #include <module.h>
@@ -41,7 +42,7 @@ void create(Configuration conf)
          "internet-explorer-8.aspx'>MSDN</a>"));
 
   defvar("ie_compat_edit_mode",
-         Variable.String("IE=edge", VAR_INITIAL,
+         Variable.String("IE=5", VAR_INITIAL,
          "Compatibility mode in Insite Editor",
          "This mode will be used when inside the Insite Editor."));
 }
@@ -55,13 +56,15 @@ void start(int whence, Configuration conf)
 mapping|void filter(mapping result, RequestID id)
 {
   if (result) {
-
     if (!result->extra_heads) result->extra_heads = ([]);
     string extra_ct = result->extra_heads["Content-Type"];
     string rtype = extra_ct || result->type;
 
-    if (rtype == "text/html") {
+    if (rtype == "text/html" && !id->variables->__no_iecompat) {
       string cli = id->client*" ";
+
+      if (cli == "Mozilla/4.0 (compatible; MSIE 5.0; Windows NT)")
+        return;
 
       TRACE ("Request client is: %s\n", cli);
 
@@ -70,21 +73,21 @@ mapping|void filter(mapping result, RequestID id)
         return;
 
       if (search(cli, " MSIE ") > -1) {
-        sscanf (cli, "%*sMSIE %d.%*d", int ver);
+        sscanf(cli, "%*sMSIE %d.%*d", int ver);
 
-        if (ver < 9) {
-          // Quirks mode in editor
+        if (ver < 12) {
+          // EDGE outside of editor
           if (!(search(id->not_query, "/__frame/")   > -1 ||
                 search(id->not_query, "/fckeditor")  > -1 ||
                 search(id->not_query, "/__internal") > -1 ||
                 search(id->not_query, "/_internal")  > -1 ))
           {
-            TRACE ("Editor view %s\n", mode);
-            result->extra_heads["X-UA-Compatible"] = edit_mode;
+            TRACE("Non-Editor view %s for %s\n", mode, id->not_query);
+            result->extra_heads["X-UA-Compatible"] = mode;
           }
           else {
-            TRACE ("Emulate %s\n", edit_mode);
-            result->extra_heads["X-UA-Compatible"] = mode;
+            TRACE("Editor view %s for %s\n", edit_mode, id->not_query);
+            result->extra_heads["X-UA-Compatible"] = edit_mode;
           }
         }
       }

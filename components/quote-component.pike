@@ -39,7 +39,7 @@ class QuoteComponentPlugin
 
   array(string) get_component_fields()
   {
-    return ({ "variant", "quote", "quotee" });
+    return ({ "variant", "quote", "quoted" });
   }
 
   mapping(int:string) get_component_variants()
@@ -65,7 +65,7 @@ class QuoteComponentInstance
         ([ "title" : "Quoted",
            "type"  : "string",
            "size"  : "60",
-           "name"  : var_prefix + "quotee" ]), id);
+           "name"  : var_prefix + "quoted" ]), id);
 
     return res;
   }
@@ -73,7 +73,7 @@ class QuoteComponentInstance
   void save_variables(string var_prefix, RequestID id)
   {
     set_field("quote",  id->variables[var_prefix + "quote"]);
-    set_field("quotee", id->variables[var_prefix + "quotee"]);
+    set_field("quotee", id->variables[var_prefix + "quoted"]);
   }
 
   void create(AbstractComponentPlugin p, string|Node xml_data)

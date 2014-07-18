@@ -13,7 +13,7 @@
 
 #charset utf8
 
-#define CMT_DEBUG
+//#define CMT_DEBUG
 //#define CMT_LOW_DEBUG
 
 #if constant(Crypto.MD5)
@@ -720,7 +720,7 @@ string get_publish_date(RequestID id)
   return md->external_use &&
          sizeof(md->external_use) &&
          md->external_use[0] &&
-         replace(Calendar.ISO.Second( md->external_use[0] )->iso_name(),"T"," ")
+         replace(Calendar.ISO.Second(md->external_use[0])->iso_name(),"T"," ")
          || vlog->date;
 }
 
@@ -791,7 +791,9 @@ mapping(string:int|AC.Identity) get_perm(RequestID id, string|void _path,
 
 void send_mail(int id, string path, mapping user, string email,
                void|int(0..1) notify, void|string subject,
-               void|string template)
+               void|string template,
+               void|string owner_email,
+               void|string owner_template)
 {
   SqlResult r = q("SELECT t1.id AS id, t1.path AS path, "
                   "t1.username AS username, t1.email AS email, "
@@ -805,6 +807,17 @@ void send_mail(int id, string path, mapping user, string email,
                   "GROUP BY t1.email", path);
 
   int(0..1) insert = 1;
+  array(string) owners = ({});
+  email = lower_case(email);
+
+  if (owner_email && sizeof(owner_email)) {
+    owners = map(owner_email/",",
+                 lambda (string s) {
+                   return String.trim_all_whites(lower_case(s));
+                 }) - ({ "" });
+
+    TRACE("Comments page owners: %O\n", owners);
+  }
 
   if (r && sizeof(r)) {
     array receivers = ({});
@@ -812,7 +825,10 @@ void send_mail(int id, string path, mapping user, string email,
     string subj = subject||mail_subject;
 
     foreach (r, mapping m) {
-      if (m->email == email) {
+      if (has_value(owners, lower_case(m->email)))
+        continue;
+
+      if (lower_case(m->email) == email) {
         TRACE(" >>> User already in DB\n");
         insert = 0;
         if (m->has_new == "1") {
@@ -837,6 +853,31 @@ void send_mail(int id, string path, mapping user, string email,
         q("UPDATE comments_mail SET has_new = '1' WHERE id = %s", m->id);
       }
     }
+  }
+
+  int(0..1) leave_early = 0;
+
+  if (email) {
+    if (has_value(owners, lower_case(email)))
+      leave_early = 1;
+
+    owners -= ({ lower_case(email) });
+  }
+
+  if (sizeof(owners) && owner_template && sizeof(owner_template)) {
+    TRACE("Send mail to owners...\n");
+
+    array from  = ({ "[url]","[id]","[commenter]" });
+    array to    = ({ path, (string)id, (user && user->name)||anon_user });
+    string subj = subject || mail_subject;
+    string text = replace(owner_template, from, to);
+    TRACE("Message to send: %s\n", text);
+    low_send_mail(subj, owners*",", text);
+  }
+
+  if (leave_early) {
+    TRACE("Commenter same as page owner (%s). Skip adding to DB\n", email);
+    return;
   }
 
   if (insert && notify && (email && sizeof(email))) {
@@ -945,19 +986,19 @@ class TagEmitCommentsPlugin
 
     if (args->sort) {
       if (args->sort[0] == '-')
-        sql += " ORDER BY " + quotefn( args->sort[1..] ) + " DESC";
+        sql += " ORDER BY " + quotefn(args->sort[1..]) + " DESC";
       else
-        sql += " ORDER BY " + quotefn( args->sort[1..] );
+        sql += " ORDER BY " + quotefn(args->sort[1..]);
     }
     else
       sql += " ORDER BY `id`";
 
     if (args["max-rows"] && args->skip) {
       sql += sprintf(" LIMIT %s,%s ", quotefn(args->skip),
-                     quotefn(args["max-rows"] ));
+                     quotefn(args["max-rows"]));
     }
     else if ( args["max-rows"] )
-      sql += " LIMIT " + quotefn( args["max-rows"] );
+      sql += " LIMIT " + quotefn(args["max-rows"]);
 
     YTRACE("%s\n", sql);
 
@@ -1064,7 +1105,9 @@ class TagCommentAdd
     "insert-id"     : RXML.t_text(RXML.PXml),
     "notify"        : RXML.t_text(RXML.PXml),
     "mail-template" : RXML.t_text(RXML.PXml),
-    "mail-subject"  : RXML.t_text(RXML.PXml)
+    "mail-subject"  : RXML.t_text(RXML.PXml),
+    "owner-email"   : RXML.t_text(RXML.PXml),
+    "owner-mail-template" : RXML.t_text(RXML.PXml)
   ]);
 
   class Frame
@@ -1112,10 +1155,8 @@ class TagCommentAdd
       int insert_id = 0;
       Sql.Sql db = get_db();
       mixed e = catch {
-        db->query(
-          sql, args->path, body, args->author, args->email,
-          args->url || "", owner, uid, handle
-        );
+        db->query(sql, args->path, body, args->author, args->email,
+                  args->url || "", owner, uid, handle);
 
         insert_id = db->master_sql->insert_id();
       };
@@ -1131,7 +1172,8 @@ class TagCommentAdd
       if (query("do_email") != 0) {
         mapping user = ([ "name" : args->author, "handle" : handle ]);
         send_mail(insert_id, args->path, user, args->email, notify,
-                  args["mail-subject"], args["mail-template"] );
+                  args["mail-subject"], args["mail-template"],
+                  args["owner-email"], args["owner-mail-template"]);
       }
 
       RXML.user_set_var(args["insert-id"]||"var.insert-id", (string)insert_id);
@@ -1475,34 +1517,119 @@ class TagEmitLikesPlugin
 
   mapping(string:RXML.Type) req_arg_types = ([]);
   mapping(string:RXML.Type) opt_arg_types = ([
-    "path" : RXML.t_text(RXML.PXml),
-    "json" : RXML.t_text(RXML.PXml)
+    "path"      : RXML.t_text(RXML.PXml),
+    "count"     : RXML.t_text(RXML.PXml),
+    "count-ext" : RXML.t_text(RXML.PXml),
+    "comments"  : RXML.t_text(RXML.PXml),
+    "json"      : RXML.t_text(RXML.PXml)
   ]);
 
   array get_dataset(mapping args, RequestID id)
   {
     if (!args->path) args->path = id->misc->localpath;
-    args->path = prefix(args->path);
 
-    mapping perm = get_perm(id, args->path);
-    string handle = perm && perm->identity->handle();
+    array(string) paths = map(args->path/",", String.trim_all_whites);
 
-    SqlResult res = q("SELECT username, fullname FROM `likes` WHERE path = %s",
-                      args->path);
+    if (args->count) {
+      array(mapping) ret = ({});
 
-    if (res) {
-      array(string) users = res->username || ({});
+      foreach (paths, string path) {
+        path = prefix(path);
 
-      mapping out = ([
-        "likes" : sizeof(res),
-        "user-has-liked" : has_value(users, handle),
-        "users" : res
-      ]);
+        SqlResult r = q("SELECT COUNT(id) AS likes FROM `likes` WHERE path=%s",
+                        path);
 
-      if (args->json)
-        out = ([ "json" : Standards.JSON.encode(out) ]);
+        mapping out = ([ "path" : path,
+                         "likes" : r && sizeof(r) && (int)r[0]->likes ]);
 
-      return ({ out });
+        if (args->comments) {
+          string sql = "SELECT COUNT(id) AS num FROM comments "
+                       "WHERE path=%s AND visible = 'y'";
+          r = q(sql, path);
+
+          out->comments = r && sizeof(r) && (int)r[0]->num;
+        }
+
+        ret += ({ out });
+      }
+
+      return ret;
+    }
+    else {
+      mapping perm = get_perm(id, args->path);
+      string handle = perm && perm->identity->handle();
+
+      if (sizeof(paths) > 1 || args["count-ext"]) {
+        array(mapping) ret = ({});
+
+        foreach (paths, string path) {
+          mapping out = ([ "path" : path ]);
+
+          SqlResult res = q("SELECT username, fullname FROM `likes` "
+                            "WHERE path=%s", prefix(path));
+          if (res) {
+            array(string) users = res->username || ({});
+
+            out->likes = ([
+              "likes" : sizeof(res),
+              "user-has-liked" : has_value(users, handle),
+              "users" : res
+            ]);
+
+          }
+
+          if (args->comments) {
+            string sql = "SELECT COUNT(id) AS num FROM comments "
+                         "WHERE path=%s AND visible = 'y'";
+            res = q(sql, prefix(path));
+            out->comments = res && sizeof(res) && (int) res[0]->num;
+          }
+
+          ret += ({ out });
+        }
+
+        if (args->json) {
+          ret = ({ ([ "json" : Standards.JSON.encode(ret) ]) });
+        }
+
+        //TRACE("%O\n", ret);
+
+        return ret;
+      }
+      else if (sizeof(paths) == 1) {
+        SqlResult res = q("SELECT username, fullname FROM `likes` "
+                          "WHERE path=%s", prefix(paths[0]));
+        if (res) {
+          array(string) users = res->username || ({});
+          int(0..1) has_liked = has_value(users, handle);
+          SqlRecord liked_user;
+
+          if (has_liked) {
+            SqlResult r = map(res, lambda(SqlRecord row) {
+              if (row->username == handle) {
+                liked_user = row;
+                return 0;
+              }
+
+              return row;
+            }) - ({ 0 });
+
+            res = r;
+          }
+
+          mapping out = ([
+            "likes" : sizeof(res),
+            "user-has-liked" : has_liked,
+            "current-user" : liked_user,
+            "users" : res
+          ]);
+
+          if (args->json)
+            out = ([ "json" : Standards.JSON.encode(out) ]);
+
+          return ({ out });
+        }
+      }
     }
 
     return ({});

@@ -1,16 +1,13 @@
-/*
-  Author: Pontus Östlund <https://profiles.google.com/poppanator>
-
-  Permission to copy, modify, and distribute this source for any legal
-  purpose granted as long as my name is still attached to it. More
-  specifically, the GPL, LGPL and MPL licenses apply to this software.
-
-  Misc utility tags
-*/
-
 #charset utf-8
+// This is a Roxen module
+//
+// Misc utility tags
+// Author: Pontus Östlund <pontus@poppa.se>
+//
+// Tab width: 8
+// Indent width: 2
 
-//#define UTILS_DEBUG
+#define UTILS_DEBUG
 
 #ifdef UTILS_DEBUG
 # define TRACE(X...) werror("%s:%d: %s", basename(__FILE__), __LINE__, sprintf(X))
@@ -713,6 +710,32 @@ class TagCimgAttr // {{{
   }
 } // }}}
 
+class TagDumpScope // {{{
+{
+  inherit RXML.Tag;
+  constant name = "dump-scope";
+
+  mapping(string:RXML.Type) req_arg_types = ([
+    "name" : RXML.t_text(RXML.PEnt)
+  ]);
+
+  class Frame
+  {
+    inherit RXML.Frame;
+    array do_return(RequestID id)
+    {
+      string s =
+        "<emit source='values' from-scope='" + args->name + "' sort='index'>"
+        " &_.index;: &_.value;<br/>"
+        "</emit>";
+
+      result = Roxen.parse_rxml(s, id);
+
+      return 0;
+    }
+  }
+} // }}}
+
 class TagCdata // {{{
 {
   inherit RXML.Tag;
@@ -796,6 +819,65 @@ class TagDump // {{{
   }
 } // }}}
 
+class TagClearFloat // {{{
+{
+  inherit RXML.Tag;
+  constant name = "clear-float";
+  mapping(string:RXML.Type) opt_arg_types = ([
+    "type" : RXML.t_text(RXML.PXml),
+    "class" : RXML.t_text(RXML.PXml)
+   ]);
+
+  class Frame
+  {
+    inherit RXML.Frame;
+    array do_return(RequestID id)
+    {
+      string cls = args["class"] || "clear";
+
+      switch (args->type)
+      {
+        case "br":
+          result = "<br class='" + cls + "'/>";
+          break;
+
+        default: result = "<div class='" + cls + "'></div>";
+      }
+
+      return 0;
+    }
+  }
+} // }}}
+
+class TagFormError // {{{
+{
+  inherit RXML.Tag;
+  constant name = "form-error";
+
+  mapping(string:RXML.Type) req_arg_types = ([
+    "id" : RXML.t_text(RXML.PEnt)
+  ]);
+
+  class Frame
+  {
+    inherit RXML.Frame;
+    array do_return(RequestID id)
+    {
+      result =
+      "<script type='text/javascript'>"
+      "/*<![CDATA[*/"
+      "form.error.errors.push({\"id\":\"" + args->id + "\"," +
+        "\"value\":" + Standards.JSON.encode(args->value||content) + "});" +
+      "/*]]>*/"
+      "</script>" +
+      "<span class='form-error' id='msg-" + args->id + "'>" +
+        (args->value||content) + "</span>";
+
+      return 0;
+    }
+  }
+} // }}}
+
 class TagShorten // {{{
 {
   inherit RXML.Tag;
@@ -843,6 +925,42 @@ class TagShorten // {{{
   }
 } // }}}
 
+class TagDynamicTemplateRedir // {{{
+{
+  inherit RXML.Tag;
+  constant name = "dynamic-template-redirect-url";
+  mapping(string:RXML.Type) req_arg_types = ([
+    "path" : RXML.t_text(RXML.PEnt)
+  ]);
+
+  mapping(string:RXML.Type) opt_arg_types = ([
+    "skip" : RXML.t_text(RXML.PEnt)
+  ]);
+
+  class Frame
+  {
+    inherit RXML.Frame;
+
+    array(string) def_skip = ({ "layout", "toggle-layout" });
+
+    array do_return(RequestID id)
+    {
+      array(string) skip = map((args->skip||"")/",", String.trim_all_whites) +
+                           def_skip;
+
+
+      array(string) vars = ({});
+
+//      TRACE("%O\n", sort(indices(id)));
+
+      foreach ((mapping)id->variables; string k; mixed var) {
+        if (has_value(skip, k)) continue;
+        //vars += ({ "
+      }
+    }
+  }
+} // }}}
+
 class TagBase64 // {{{
 {
   inherit RXML.Tag;
@@ -850,7 +968,8 @@ class TagBase64 // {{{
 
   mapping(string:RXML.Type) opt_arg_types = ([
     "encode" : RXML.t_text(RXML.PEnt),
-    "decode" : RXML.t_text(RXML.PEnt)
+    "decode" : RXML.t_text(RXML.PEnt),
+    "nobr"   : RXML.t_text(RXML.PEnt)
   ]);
 
   class Frame
@@ -861,11 +980,13 @@ class TagBase64 // {{{
       if (args->decode)
         result = MIME.decode_base64(content);
       else
-        result = MIME.encode_base64(content);
+        result = MIME.encode_base64(content, !!args->nobr);
       return 0;
     }
   }
 } // }}}
+
+#define X_USER_NAME (id->misc->scope_user && id->misc->scope_user->username)
 
 class TagSafeJS // {{{
 {
@@ -914,8 +1035,7 @@ class TagSafeJS // {{{
       if (args->get) {
         if (id->misc->js_script) {
           foreach (Array.uniq(id->misc->js_script), string ss) {
-            result += sprintf("<script type='text/javascript' src='%s'>" +
-                              "</script>", ss);
+            result += sprintf("<script src='%s'></script>", ss);
           }
         }
 
@@ -929,8 +1049,7 @@ class TagSafeJS // {{{
                      ({ "&lt;", "&gt;", "&amp;" }),
                      ({ "<",    ">",    "&"     }));
 
-          result += "\n<script type='text/javascript'>\n//<![CDATA[\n" + s +
-                    "\n//]]>\n</script><noscript></noscript>\n";
+          result += "<script>" + s + "</script><noscript></noscript>";
 
           id->misc->js_tail = 0;
         }
@@ -945,8 +1064,7 @@ class TagSafeJS // {{{
           if (args->onload)
             s = "$(function() { " + s + " });";
 
-          result = "\n<script type='text/javascript'>\n//<![CDATA[\n" + s +
-                   "\n//]]>\n</script><noscript></noscript>\n";
+          result = "<script>" + s + "</script><noscript></noscript>";
         }
       }
 
@@ -990,7 +1108,7 @@ string md5(string in) // {{{
 
 class TagPadINT // {{{
 // <padint pad="3" separator=",">3000000</padint>
-// results in 3,000,000
+// resulterar i 3,000,000
 {
   inherit RXML.Tag;
   constant name = "padint";
@@ -1740,6 +1858,40 @@ class TagVcalendar // {{{
   }
 } // }}}
 
+class TagTooltip // {{{
+{
+  inherit RXML.Tag;
+  constant name = "tooltip";
+
+  mapping(string:RXML.Type) req_arg_types = ([
+    "title" : RXML.t_text(RXML.PEnt)
+  ]);
+
+  class Frame
+  {
+    inherit RXML.Frame;
+    array do_return(RequestID id)
+    {
+      args->title += "::" + content;
+      result = "<em" + mk_attr_str(args) + "><span>?</span></em>\n";
+      return 0;
+    }
+
+    string mk_attr_str(mapping m)
+    {
+
+      if ( !m["class"] )
+        m["class"] = "help";
+
+      string s = "";
+      foreach (m; string k; string v)
+        s += " " + k + "='" + Roxen.html_encode_string(v) + "'";
+
+      return s;
+    }
+  }
+} // }}}
+
 class TagTVInput // {{{
 {
   inherit RXML.Tag;
@@ -1876,6 +2028,56 @@ class TagCSSCompat // {{{
         result = b * ";\n";
       }
       else result = "APA";
+    }
+  }
+} // }}}
+
+class TagNotify // {{{
+{
+  inherit RXML.Tag;
+  constant name = "notify";
+
+  mapping(string:RXML.Type) opt_arg_types = ([
+    "auto-remove" : RXML.t_text(RXML.PXml),
+    "class" : RXML.t_text(RXML.PXml),
+    "ok" : RXML.t_text(RXML.PXml),
+  ]);
+
+  class Frame
+  {
+    inherit RXML.Frame;
+
+    array do_return(RequestID id)
+    {
+      string auto_rm = args["auto-remove"];
+      string klass = "notify" + (!!args->ok ? " notify-ok" : "");
+
+      if ( args["class"] )
+        klass += " " + args["class"];
+
+      m_delete(args, "ok");
+      m_delete(args, "auto-remove");
+
+      args["class"] = klass;
+
+      if (auto_rm) {
+        if (!sizeof(auto_rm))
+          auto_rm = "4000";
+        string gid = (string)Standards.UUID.make_version4();
+        content +=
+        "<span id='x" + gid + "'></span>"
+        "<script type='text/javascript'>"
+        "$(function() {"
+        " setTimeout(function() {"
+         " $('#x" + gid + "').parent().fadeOut(function() {"
+          " $(this).remove();"
+         " })"
+        " }, " + auto_rm + ");"
+        "})"
+        "</script>\n<noscript></noscript>\n";
+      }
+
+      result = Roxen.make_container("div", args, content);
     }
   }
 } // }}}
@@ -2185,6 +2387,26 @@ class TagEmitVariable // {{{
   }
 } // }}}
 
+class TagFileUpload // {{{
+{
+  inherit RXML.Tag;
+  constant name = "file-upload";
+
+  mapping(string:RXML.Type) opt_arg_types = ([
+    "path" : RXML.t_text(RXML.PXml),
+    "chroot" : RXML.t_text(RXML.PXml),
+  ]);
+
+  class Frame
+  {
+    inherit RXML.Frame;
+    array do_return(RequestID id)
+    {
+      return 0;
+    }
+  }
+} // }}}
+
 class TagMonthName // {{{
 {
   inherit RXML.Tag;
@@ -2221,6 +2443,125 @@ class TagMonthName // {{{
       };
 
       if (e) report_error ("Unhandled data: %s\n", describe_backtrace(e));
+
+      return 0;
+    }
+  }
+} // }}}
+
+class TagHtmlMailToText // {{{
+{
+  inherit RXML.Tag;
+  constant name = "html-mail-to-text";
+
+  mapping(string:RXML.Type) opt_arg_types = ([
+    /*"split" : RXML.t_text(RXML.PXml)*/
+  ]);
+
+  mapping block_tags = ([
+    "/div" : 1,
+    "/fieldset" : 1
+  ]);
+
+  mapping inline_tags = ([
+    "/strong" : 1,
+    "/span" : 1,
+    "/small" : 1
+  ]);
+
+  class Frame
+  {
+    inherit RXML.Frame;
+    array do_return(RequestID id)
+    {
+      int(0..1) collect = 0;
+
+      string repeat_header(string what) {
+        return "\n" + (what * 80) + "\n\n";
+      };
+
+      Parser.HTML p = Parser.HTML();
+
+      p->add_container("html",
+        lambda(Parser.HTML pp, mapping args, string cont) {
+          TRACE("HTML tag\n");
+          return String.trim_all_whites(cont);
+        }
+      );
+
+#define FEED_DEEPER(X) (pp->clone()->feed(X)->finish()->read())
+
+      p->add_containers(([
+        "head" : lambda(Parser.HTML pp, mapping args, string cont) {
+          TRACE("Head tag\n");
+          return "";
+        },
+        "body" : lambda(Parser.HTML pp, mapping args, string cont) {
+          TRACE("Body tag\n");
+          return String.trim_all_whites(cont);
+        },
+        "h1" : lambda(Parser.HTML pp, mapping args, string cont) {
+          TRACE("H1 tag\n");
+          return ({ "\n" + FEED_DEEPER(cont) + repeat_header("=") });
+        },
+        "h2" : lambda(Parser.HTML pp, mapping args, string cont) {
+          TRACE("H2 tag\n");
+          return ({ "\n" + FEED_DEEPER(cont) + repeat_header("-") });
+        },
+        "h3" : lambda(Parser.HTML pp, mapping args, string cont) {
+          TRACE("H3 tag\n");
+          return ({ "\n" + FEED_DEEPER(cont) + repeat_header(".") });
+        },
+        "p" : lambda(Parser.HTML pp, mapping args, string cont) {
+          TRACE("P tag\n\n");
+          return ({ FEED_DEEPER(cont) + "\n\n" });
+        },
+        "small" : lambda(Parser.HTML pp, mapping args, string cont) {
+          TRACE("small tag\n");
+          return ({ cont });
+        },
+        "ul" : lambda(Parser.HTML pp, mapping args, string cont) {
+          TRACE("UL tag\n");
+          return ({ "\n" + FEED_DEEPER(String.trim_all_whites(cont)) + "\n" });
+        },
+        "ol" : lambda(Parser.HTML pp, mapping args, string cont) {
+          TRACE("OL tag\n");
+          return ({ "\n" + FEED_DEEPER(String.trim_all_whites(cont)) + "\n" });
+        },
+        "li" : lambda(Parser.HTML pp, mapping args, string cont) {
+          TRACE("li tag\n\n");
+          return ({ "  * " + FEED_DEEPER(cont) + "\n" });
+        },
+      ]));
+
+      p->_set_tag_callback(
+        lambda(Parser.HTML pp) {
+          string tn = pp->tag_name();
+          string s;
+          if (block_tags[tn]) {
+            s = "\n";
+          }
+          else if (inline_tags[tn]) {
+            s = " ";
+          }
+          else {
+            s = "";
+          }
+
+          return ({ s });
+        }
+      );
+
+      p->_set_data_callback(lambda(Parser.HTML pp, string data) {
+        sscanf(data, "%*[ \t\n]%s", data);
+        return ({ data });
+      });
+
+      string x = p->feed(content)->finish()->read()||"";
+
+      TRACE("res: %O\n", x);
+
+      result = x || "(nothing)";
 
       return 0;
     }
@@ -2273,7 +2614,7 @@ int string2minutes(string stime) // {{{
 void create(Configuration _conf) // {{{
 {
   conf = _conf;
-  set_module_creator("Pontus Östlund <poppanator@gmail.com>");
+  set_module_creator("Pontus Östlund <pontus@poppa.se>");
 } // }}}
 
 void start(int when, Configuration _conf) // {{{

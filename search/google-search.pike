@@ -492,7 +492,7 @@ class GoogleSearch
     if (args) {
       TRACE("In args: %O\n", args);
       foreach (args; string k; string v) {
-        if ( allowed[k] )
+        if (allowed[k])
           params[k] = v;
       }
     }

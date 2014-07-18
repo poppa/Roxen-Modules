@@ -1,14 +1,12 @@
-/*
-  Author: Pontus Östlund <https://profiles.google.com/poppanator>
+// This is a Roxen® module
+// Based on the original tablify.pike
+//
+// Author: Pontus Östlund <pontus@poppa.se>
+//
+// Tab width:    8
+// Indent width: 2
 
-  Permission to copy, modify, and distribute this source for any legal
-  purpose granted as long as my name is still attached to it. More
-  specifically, the GPL, LGPL and MPL licenses apply to this software.
-
-  This is a Roxen® module
-  Based on the original tablify.pike
-*/
-
+// {{{ HEAD
 #charset utf-8
 #include <module.h>
 inherit "module";
@@ -22,8 +20,9 @@ inherit "module";
 #endif
 
 constant thread_safe   = 1;
+//constant module_unique = 1;
 constant module_type   = MODULE_TAG;
-constant module_name   = "Poppa Tags: Tablify2";
+constant module_name   = "TVAB Tags: Tablify2";
 constant module_doc    =
 #"This module provides the <tt>&lt;tablify2&gt;</tt> tag that is used to
 generate tables from CSV/TSV data.";
@@ -159,18 +158,19 @@ array _cont = ({
 // Allowed tags in cell data
 array _tags = ({ "br", "button", "hr", "img", "input" });
 
-
+// }}}
 
 // create
-void create(Configuration _conf)
+void create(Configuration _conf) // {{{
 {
-  set_module_creator("Pontus Östlund <poppanator@gmail.com>");
-}
+  set_module_creator("Pontus Östlund (with a little help from some original "
+                     "Roxen modules) <pontus@poppa.se>");
+} // }}}
 
 // start
 void start(int when, Configuration _conf) {}
 
-class PageState
+class PageState // {{{
 {
   inherit StateHandler.Page_state;
 
@@ -196,7 +196,7 @@ class PageState
     return url +
       "?" + (var || "__state") + "=" + uri_encode(value, key) + other_vars;
   }
-}
+} // }}}
 
 class TagTablify2
 {
@@ -204,7 +204,7 @@ class TagTablify2
   constant name = "tablify2";
 
   // Callback for parse_html where we setup the alignment rule
-  string _align(string tag, mapping arg, string data, mapping args)
+  string _align(string tag, mapping arg, string data, mapping args) // {{{
   {
     array align = map(data/args->rowseparator,
       lambda(string row) {
@@ -223,10 +223,10 @@ class TagTablify2
     args->align = align && align[0]-({ 0 });
 
     return "";
-  }
+  } // }}}
 
   // Callback for the <type/> tag.
-  string _type(string tag, mapping arg, string data, mapping args)
+  string _type(string tag, mapping arg, string data, mapping args) // {{{
   {
     array type = map(data/args->rowseparator,
       lambda(string row) {
@@ -243,47 +243,47 @@ class TagTablify2
     args->coltype = type && type[0]-({ 0 });
 
     return "";
-  }
+  } // }}}
 
   // Callback for the <caption/> tag.
-  string _caption(string tag, mapping arg, string data, mapping args)
+  string _caption(string tag, mapping arg, string data, mapping args) // {{{
   {
     TRACE("Found caption tag: %s\n", data||"");
     args->caption = data;
     return "";
-  }
+  } // }}}
 
-  string _tfoot(string tag, mapping arg, string data, mapping args)
+  string _tfoot(string tag, mapping arg, string data, mapping args) // {{{
   {
     TRACE("Found tfoot tag\n");
     args->tfoot = Roxen.make_container("tfoot", arg, data);
     return "";
-  }
+  } // }}}
 
-  string _tbody(string tag, mapping arg, string data, mapping args)
+  string _tbody(string tag, mapping arg, string data, mapping args) // {{{
   {
     TRACE("Found tbody tag\n");
     args->tbody = Roxen.make_container("tbody", arg, data);
     return "";
-  }
+  } // }}}
 
   // Checks if argument is set and if not returns the default from _opts
-  mixed isarg(mapping args, string key)
+  mixed isarg(mapping args, string key) // {{{
   {
     return ( args[key] ? args[key] : _opts[key] );
-  }
+  } // }}}
 
   // Create the sorting arrow in interactive mode
-  string get_arrow(string order, mapping args)
+  string get_arrow(string order, mapping args) // {{{
   {
     string arrow = isarg(args, "sort-" + order + "-img");
     return "<img src='" + arrow + "' alt='" + order + "' title='' "
            "style='margin-left: 5px' />";
-  }
+  } // }}}
 
   // If a key in args exists as an index in the reference array it's okey to
   // use as an html tag attribute
-  mapping set_attr_args(array ref, mapping args)
+  mapping set_attr_args(array ref, mapping args) // {{{
   {
     mapping out = ([]);
     foreach (ref, string k)
@@ -291,23 +291,23 @@ class TagTablify2
         out[k] = args[k];
 
     return out;
-  }
+  } // }}}
 
   // Creates a string of html tag attributes
   // We could use Roxen.make_tag_attributes() but since we can have integers
   // as values from the _opts mapping that will cause an internal server error
   // so we use this instead.
-  string mk_attr(mapping m)
+  string mk_attr(mapping m) // {{{
   {
     string s = "";
     foreach (m; string k; string v)
       if (v && stringp(v) && sizeof(v))
         s += sprintf(" %s=\"%s\"", k, Roxen.html_encode_string(v));
     return s;
-  }
+  } // }}}
 
   // Search for linkable string. Slightly modified from wash_html.pike
-  string linkify(string s)
+  string linkify(string s) // {{{
   {
     mapping fix_link(string l)
     {
@@ -350,29 +350,29 @@ class TagTablify2
     );
 
     return parser->finish(s)->read();
-  }
+  } // }}}
 
   // Fixes the interactive sorting links
   // From tablify.pike
-  string encode_url(int col, int state, mapping args, RequestID id)
+  string encode_url(int col, int state, mapping args, RequestID id) // {{{
   {
     state = col == abs(state) ? -1*state : col;
     return args->state->encode_revisit_url(id, state, args->sort_state_key,
                                            0, args->url) +
            "#" + args->state_id;
-  }
+  } // }}}
 
   // From wash_html.pike
-  string safe_cont(string tag, mapping m, string cont)
+  string safe_cont(string tag, mapping m, string cont) // {{{
   {
     return replace(
       Roxen.make_tag(tag, m),
       ({ "<",">" }), ({ "\1[","\1]" })
     ) + cont + "\1[/" + tag + "\1]";
-  }
+  } // }}}
 
   // From wash_html.pike
-  string safe_tag(string tag, mapping m, string close_tags)
+  string safe_tag(string tag, mapping m, string close_tags) // {{{
   {
     return replace(
       RXML.t_xml->format_tag(
@@ -380,11 +380,11 @@ class TagTablify2
       ),
       ({ "<",">" }), ({ "\1[","\1]" })
     );
-  }
+  } // }}}
 
   // Setup default cell attributes. The num* rules isn't set here since they
   // can differ from row to row.
-  array cell_formats(mapping args)
+  array cell_formats(mapping args) // {{{
   {
     array out = allocate(args->flood);
     mapping map;
@@ -414,11 +414,11 @@ class TagTablify2
     }
 
     return out;
-  }
+  } // }}}
 
   // Takes a string of css styles and remove duplicate properties.
   // The last occurance of a property will be kept!
-  string unique_styles(string css)
+  string unique_styles(string css) // {{{
   {
     if (!css || !sizeof(css))
       return 0;
@@ -439,10 +439,10 @@ class TagTablify2
       out += ({ k + ":" + v });
 
     return out*";";
-  }
+  } // }}}
 
   // Parse the tag content, setup rows, aligment and so on...
-  string parse_indata(string content, mapping args, RequestID id)
+  string parse_indata(string content, mapping args, RequestID id) // {{{
   {
     string tail = "";
 
@@ -452,15 +452,20 @@ class TagTablify2
     args->rowseparator  = isarg(args, "rowseparator");
     args->cellseparator = isarg(args, "cellseparator");
 
-    if ( args["allow-html"] ) {
+    if (args["allow-html"]) {
+      if (args["no-escape"])
+        content = Roxen.html_decode_string(content);
+
       content -= "\1";
       mapping allowed_tags = mkmapping(_tags,allocate(sizeof(_tags),safe_tag));
       mapping allowed_cont = mkmapping(_cont,allocate(sizeof(_cont),safe_cont));
       content = parse_html(content, allowed_tags, allowed_cont, 1);
+
+      TRACE("Content after parse: %s\n", content);
     }
 
-    args->align         = ({});
-    args->flood         = 0; // The highest number of cells in a row
+    args->align = ({});
+    args->flood = 0; // The highest number of cells in a row
 
     // Look for alignment and type rules e t c
     mapping cbs = ([ "align"   : _align,
@@ -488,7 +493,7 @@ class TagTablify2
     string bogus_query;
 
     // This part can probably be solved in a nicer manner!
-    if ( args["append-query"] ) {
+    if (args["append-query"]) {
       args["append-query"] = replace(args["append-query"], "&amp;", "&");
 
       array qparts = args["append-query"]/"&";
@@ -572,7 +577,7 @@ class TagTablify2
       rows   = rows[1..];
     }
 
-    if ( args["interactive-sort"] ) {
+    if (args["interactive-sort"]) {
       if (args->nosort)
         args->nosort = (multiset)(args->nosort/",");
       else
@@ -702,7 +707,7 @@ class TagTablify2
 
     string table = mk_table(rows, args, id);
 
-    if ( args["allow-html"] )
+    if (args["allow-html"])
       table = replace(table, ({ "\1[", "\1]" }), ({ "<", ">" }));
 
     if (bogus_query)
@@ -713,10 +718,10 @@ class TagTablify2
       table +
       (args->_pager && !args["no-pager-after"] && !args->pagervar ?
         args->_pager : "");
-  }
+  } // }}}
 
   // Create the resultning table
-  string mk_table(array rows, mapping args, RequestID id)
+  string mk_table(array rows, mapping args, RequestID id) // {{{
   {
     string table = "<table", tbod = "<tbody>\n", thead = "<thead>\n";
     mapping attr = ([]);
@@ -971,9 +976,9 @@ class TagTablify2
     table += "</table>\n";
 
     return gtext ? Roxen.parse_rxml(table, id) : table;
-  }
+  } // }}}
 
-  string merge_row_attr(string a, string b, mapping extras)
+  string merge_row_attr(string a, string b, mapping extras) // {{{
   {
     sscanf(a, "%*sclass=\"%s\"", string ac);
     sscanf(b, "%*sclass=\"%s\"", string bc);
@@ -992,7 +997,7 @@ class TagTablify2
       out += sprintf(" style=\"%s\"", os);
 
     return out;
-  }
+  } // }}}
 
   // ---
 
@@ -1026,6 +1031,13 @@ class TagTablify2
       result = parse_indata(content, args, id);
     }
   }
+}
+
+// Compat tag for my earlier version of tablify
+class TagTablifyW3C
+{
+  inherit TagTablify2;
+  constant name = "tablify-w3c";
 }
 
 TAGDOCUMENTATION

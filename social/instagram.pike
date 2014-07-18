@@ -18,7 +18,7 @@ inherit "roxen-module://social-tagset" : tagset;
 
 #define _ok RXML_CONTEXT->misc[" _ok"]
 
-#define SOCIAL_DEBUG
+//#define SOCIAL_DEBUG
 
 #ifdef SOCIAL_DEBUG
 # define TRACE(X...) werror("%s:%d: %s",basename(__FILE__),__LINE__,sprintf(X))
@@ -73,7 +73,7 @@ class TagInstagram
 
     string do_login_url(mapping args, RequestID id)
     {
-      TRACE ("Login URL in Instagram!\n");
+      TRACE("Login URL in Instagram!\n");
       return ::do_login_url(args, id);
     }
   }
@@ -83,10 +83,13 @@ class TagInstagram
     inherit TagSocialLogin;
     constant name = "instagram-login";
 
-    array do_login (mapping args, RequestID id)
+    array do_login(mapping args, RequestID id)
     {
-      array data = ::do_login (args, id);
-      TRACE ("do_login in instagram: %O\n\n", data);
+      array data = ::do_login(args, id);
+      TRACE("do_login in instagram: %O\n\n", data);
+
+      if (data && sizeof(data) && args->variable)
+        RXML.user_set_var(args->variable, data[0]);
     }
   }
 
@@ -113,8 +116,12 @@ class TagInstagram
       }
 
       function f = api[args->method][args->query];
+
+      TRACE("Func: %O(%O, %O)\n", f, uid, p);
+
       if (f) {
         mapping res = f(uid, p);
+
         if (res) {
           return ({ res });
         }
@@ -145,6 +152,7 @@ class TagInstagram
 
       string ck;
       if (!args["no-cache"]) {
+        TRACE("No no-cache, try get cache\n");
         ck = do_get_cache_key(args, id);
 
         if (ret = dcache->get(ck)) {
@@ -155,6 +163,8 @@ class TagInstagram
 
       mapping p = do_get_params(args, id);
       RoxenInstagram api = api_instance(id);
+
+      TRACE("Instagram API: %O\n", api);
 
       mapping res = api->tags->recent(args->tag, p);
 
@@ -177,7 +187,7 @@ class TagInstagram
   }
 }
 
-protected mapping(string:object) twcache = ([]);
+//protected mapping(string:object) twcache = ([]);
 
 class RoxenInstagram
 {

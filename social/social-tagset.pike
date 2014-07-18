@@ -16,16 +16,7 @@ inherit "module";
 
 #define _ok RXML_CONTEXT->misc[" _ok"]
 
-#if 0
-/* The Facebook Authorization object */
-#define FB  id->misc->facebook
-#define FB_AUTH  id->misc->facebook->authorization
-#define SET_COOKIE(V) Roxen.set_cookie(id, cookie_name, \
-                                       encode_cookie(encode_value(V)),-1,0,"/")
-#define REMOVE_COOKIE() Roxen.remove_cookie(id, cookie_name, "", 0, "/")
-#endif
-
-#define SOCIAL_DEBUG
+//#define SOCIAL_DEBUG
 
 #ifdef SOCIAL_DEBUG
 # define TRACE(X...) werror("%s:%d: %s",basename(__FILE__),__LINE__,sprintf(X))
@@ -51,6 +42,10 @@ void create(Configuration _conf)
   defvar("api_secret",
          Variable.String("", 0, "API secret", "Default API secret"));
 
+  defvar("access_token",
+         Variable.String("", 0, "Access token", "Generic access token to use "
+                                                "if the service supports "
+                                                "persistent authentications"));
   defvar("redirect_uri",
          Variable.String("", 0, "Redirect URI", "Where should the user return "
                                                 "to after authorization"));
@@ -62,32 +57,32 @@ void create(Configuration _conf)
 }
 
 constant plugin_name = "social";
-constant cookie_name = "socialsess";
-constant Klass = Social.Api;
+protected constant cookie_name = "socialsess";
+protected constant Klass = Social.Api;
 
-Social.Api api_instance(RequestID id)
+protected Social.Api api_instance(RequestID id)
 {
   return id->misc[plugin_name];
 }
 
-Social.Api.Authorization auth_instance(RequestID id)
+protected Social.Api.Authorization auth_instance(RequestID id)
 {
   return id->misc[plugin_name] && id->misc[plugin_name]->authorization;
 }
 
-Social.Api register_instance(Social.Api api, RequestID id)
+protected Social.Api register_instance(Social.Api api, RequestID id)
 {
-  TRACE ("Register API: %O\n", api);
+  TRACE("Register API: %O : %O\n", api, plugin_name);
   id->misc[plugin_name] = api;
   return api;
 }
 
-void set_cookie(mixed v, RequestID id)
+protected void set_cookie(mixed v, RequestID id)
 {
   Roxen.set_cookie(id, cookie_name, encode_cookie(encode_value(v)),-1,0,"/");
 }
 
-void remove_cookie(RequestID id)
+protected void remove_cookie(RequestID id)
 {
   Roxen.remove_cookie(id, cookie_name, "", 0, "/");
 }
@@ -100,10 +95,12 @@ class TagSocial
   constant name = "social";
 
   mapping(string:RXML.Type) opt_arg_types = ([
-    "api-key"     : RXML.t_text(RXML.PEnt),
-    "api-secret"  : RXML.t_text(RXML.PEnt),
-    "redirect-to" : RXML.t_text(RXML.PEnt),
-    "permissions" : RXML.t_text(RXML.PEnt),
+    "api-key"      : RXML.t_text(RXML.PEnt),
+    "api-secret"   : RXML.t_text(RXML.PEnt),
+    "access-token" : RXML.t_text(RXML.PEnt),
+    "redirect-to"  : RXML.t_text(RXML.PEnt),
+    "permissions"  : RXML.t_text(RXML.PEnt),
+    "cookie-name"  : RXML.t_text(RXML.PEnt)
   ]);
 
   RXML.TagSet internal = RXML.TagSet(
@@ -127,12 +124,6 @@ class TagSocial
     {
       CACHE(0);
 
-      Social.Api api = api_instance(id);
-      Social.Api.Authorization auth;
-
-      if (api)
-        RXML.parse_error("<%s></%s> can not be nested!\n", name, name);
-
       vars = ([
         "is-authenticated"  : "0",
         "is-login-callback" : "0",
@@ -143,15 +134,39 @@ class TagSocial
         "expires"           : "0"
       ]);
 
-      string ak = args["api-key"]     || query("api_key");
-      string as = args["api-secret"]  || query("api_secret");
-      string re = args["redirect-to"] || query("redirect_uri");
+      string ak   = args["api-key"]     || query("api_key");
+      string as   = args["api-secret"]  || query("api_secret");
+      string re   = args["redirect-to"] || query("redirect_uri");
+      string acct = args["access-token"];
+      string accs = args["access-secret"];
+
+      args["api-key"] = "[*SECRET*]";
+      args["api-secret"] = "[*SECRET*]";
+      args["access-token"] = "[*SECRET*]";
+      args["access-secret"] = "[*SECRET*]";
+
+      Social.Api api = api_instance(id);
+      Social.Api.Authorization auth;
+
+      if (api)
+        RXML.parse_error("<%s></%s> can not be nested!\n", name, name);
 
       api = register_instance(Klass(ak, as, re, args->permissions), id);
       auth = auth_instance(id);
 
+      if (acct)
+        auth->access_token = acct;
+
+      if (acct && accs && auth->set_authentication) {
+        auth->set_authentication(acct, accs);
+        vars["is-authenticated"] = "1";
+      }
+
+      string local_cookie_name = args["cookie-name"] || cookie_name;
+
       mixed cookie;
-      if ((cookie = id->cookies[cookie_name]) && sizeof(cookie)) {
+      if (!acct && (cookie = id->cookies[local_cookie_name]) && sizeof(cookie))
+      {
         TRACE("::::::::::: %s\n", cookie);
         auth->set_from_cookie(decode_cookie(cookie));
 
@@ -172,13 +187,19 @@ class TagSocial
           report_error("Facebook decoding error: %s\n", describe_backtrace(e));
       }
 
-      if (id->variables->code)
+      // code is for OAuth2 oauth_token for OAuth1
+      if (id->variables->code || id->variables->oauth_token)
         vars["is-login-callback"] = "1";
 
       if (id->variables->error) {
         vars["is-error"] = "1";
         vars["error"] = id->variables->error;
         vars["error-message"] = id->variables->error_description;
+      }
+      else if (id->variables->denied) {
+        vars["is-error"] = "1";
+        vars["error"] = "access_denied";
+        vars["error-message"] = "Access was denied by the user";
       }
 
       TRACE("%O\n", api);
@@ -265,8 +286,15 @@ class TagSocial
       TRACE("Login code: %O\n", id->variables->code);
       Social.Api.Authorization auth = auth_instance(id);
 
-      string v;
-      if (mixed e = catch(v=auth->request_access_token(id->variables->code))) {
+      string v,
+      code = id->variables->code||id->variables->oauth_verifier;
+
+      // OAuth 1
+      if (id->variables->oauth_verifier && id->variables->oauth_token) {
+        auth->set_authentication(id->variables->oauth_token, 0);
+      }
+
+      if (mixed e = catch(v = auth->request_access_token(code))) {
         report_error("request_access_token(): %s\n", describe_backtrace(e));
         _ok = 0;
         return 0;
@@ -330,7 +358,8 @@ class TagSocial
       "http-method" : RXML.t_text(RXML.PEnt),
       "no-cache" : RXML.t_text(RXML.PEnt),
       "cache" : RXML.t_text(RXML.PEnt),
-      "select" : RXML.t_text(RXML.PEnt)
+      "select" : RXML.t_text(RXML.PEnt),
+      "query" : RXML.t_text(RXML.PEnt)
     ]);
 
     mapping do_get_params(mapping args, RequestID id)
@@ -348,7 +377,20 @@ class TagSocial
     string do_get_cache_key(mapping args, RequestID id)
     {
       mapping cookie = get_cookie(id);
-      if (!cookie) return 0;
+
+      if (!cookie) {
+        Social.Api.Authorization auth = auth_instance(id);
+        TRACE("## %O\n", auth);
+
+        if (!auth)
+          return 0;
+
+        cookie = ([ "access_token" : auth->access_token ]);
+
+        if (!cookie->access_token)
+          return 0;
+      }
+
       return make_cache_key(name+plugin_name,
                             args + ([ "__" : cookie->access_token ]));
     }
@@ -360,10 +402,131 @@ class TagSocial
 
     array get_dataset(mapping args, RequestID id)
     {
-      TRACE ("Am I here?\n");
       return do_request(args, id);
     }
   }
+}
+
+//! Emit weather forecast
+class TagEmitSubscope // {{{
+{
+  inherit RXML.Tag;
+  constant name = "emit";
+  constant plugin_name = "subscope";
+
+  mapping(string:RXML.Type) req_arg_types = ([
+    "variable" : RXML.t_text(RXML.PEnt)
+  ]);
+
+  mapping(string:RXML.Type) opt_arg_types = ([
+  ]);
+
+  array get_dataset(mapping args, RequestID id)
+  {
+    mixed var = RXML.user_get_var(args->variable);
+
+    if (arrayp(var))
+      return var;
+
+    return var && ({ var }) || ({});
+  }
+} // }}}
+
+class TagTimeToDuration
+{
+  inherit RXML.Tag;
+  constant name = "time-to-duration";
+
+  mapping(string:RXML.Type) req_arg_types = ([]);
+  mapping(string:RXML.Type) opt_arg_types = ([
+    "timestamp" : RXML.t_text(RXML.PEnt),
+    "iso-time" : RXML.t_text(RXML.PEnt),
+    "hours" : RXML.t_text(RXML.PEnt),
+    "timezone" : RXML.t_text(RXML.PEnt)
+  ]);
+
+
+  class Frame
+  {
+    inherit RXML.Frame;
+
+    array do_return(RequestID id)
+    {
+      int ts = 0;
+      Calendar.Second s;
+
+      mixed err = catch {
+        if (args["iso-time"]) {
+          s = Calendar.dwim_time(args["iso-time"]);
+        }
+        else if (args->timestamp) {
+
+        }
+        else {
+          RXML.parse_error("Missing required argument \"timestamp\" or "
+                           "\"iso-time\"");
+        }
+
+        if (args->timezone) {
+          mixed e = catch {
+            s->set_timezone(args->timezone);
+          };
+
+          if (e) werror("Timezone error: %s\n", describe_backtrace(e));
+        }
+
+        if (args->hours && s) {
+          s = s + (s->hour() * args->hours);
+        }
+
+        if (s) ts = s->unix_time();
+
+        result = time_elapsed(ts);
+      };
+
+      if (err) {
+        werror("time-to-duration: %s\n", describe_error(err));
+        result = args["iso-time"] || args["timestamp"];
+      }
+
+      return 0;
+    }
+  }
+}
+
+//! Human readable representation of @[timestamp].
+//!
+//! Examples are:
+//!       0..30 seconds: Just now
+//!      0..120 seconds: Just recently
+//!   121..3600 seconds: x minutes ago
+//!   ... and so on
+//!
+//! @param timestamp
+protected string time_elapsed(int timestamp)
+{
+  int diff = (int) time(timestamp);
+  int t;
+
+  switch (diff)
+  {
+    case      0 .. 30: return "Just nu";
+    case     31 .. 120: return "Nyligen";
+    case    121 .. 3600: return sprintf("%d minuter sedan",(int)(diff/60.0));
+    case   3601 .. 86400:
+      t = (int)((diff/60.0)/60.0);
+      return sprintf("%d timm%s sedan", t, t > 1 ? "ar" : "e");
+
+    case  86401 .. 604800:
+      t = (int)(((diff/60.0)/60.0)/24);
+      return sprintf("%d dag%s sedan", t, t > 1 ? "ar" : "");
+
+    case 604801 .. 31449600:
+      t = (int)((((diff/60.0)/60.0)/24)/7);
+      return sprintf("%d veck%s sedan", t, t > 1 ? "or" : "a");
+  }
+
+  return "Länge sedan";
 }
 
 protected mixed get_selection(mapping data, string sel)
@@ -376,17 +539,17 @@ protected mixed get_selection(mapping data, string sel)
   return data;
 }
 
-string encode_cookie(string v)
+protected string encode_cookie(string v)
 {
   return v && sizeof(v) && MIME.encode_base64(v);
 }
 
-string decode_cookie(string v)
+protected string decode_cookie(string v)
 {
   return v && sizeof(v) && MIME.decode_base64(v);
 }
 
-mapping get_cookie(RequestID id)
+protected mapping get_cookie(RequestID id)
 {
   if (string v = decode_cookie(id->cookies[cookie_name])) {
     TRACE("### THE COOKIE: %s\n", v);
@@ -396,9 +559,15 @@ mapping get_cookie(RequestID id)
   return 0;
 }
 
-string make_cache_key(string name, mapping args)
+protected string make_cache_key(string name, mapping args)
 {
-  return Social.md5(name + indices(args)*"" + values(args)*"");
+  string keys = map(indices(args), lambda (mixed s) {
+                                     return (string)s;
+                                   })*"";
+  string vals = map(values(args), lambda (mixed s) {
+                                     return (string)s;
+                                   })*"";
+  return Social.md5(keys + vals);
 }
 
 class DataCache
@@ -437,6 +606,7 @@ class DataCache
     {
       data    = _data;
       created = time();
+
       if (_expires)
         expires = created + _expires;
     }

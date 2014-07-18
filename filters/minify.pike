@@ -23,6 +23,8 @@ inherit "module";
 # define TRACE(X...) 0
 #endif
 
+#define TRIM(S) String.trim_all_whites((S))
+
 constant thread_safe = 1;
 constant module_type = MODULE_FILTER;
 constant module_name = "Poppa Tags: JSMin/CSSMin";
@@ -33,7 +35,7 @@ private string qsv;
 
 void create(Configuration conf)
 {
-  set_module_creator("Pontus Östlund, &lt;spam@poppa.se&gt;.");
+  set_module_creator("Pontus Östlund <poppanator@gmail.com>");
 
   defvar("allow_paths",
          Variable.StringList(({}), VAR_INITIAL,
@@ -86,7 +88,75 @@ mapping|void filter(mapping result, RequestID id)
       result->data = CSSMin()->minify(result->data);
       return result;
     }
+    else if (id->variables->prefix) {
+      result->data = prefix_css(id->variables->prefix, result->data);
+      return result;
+    }
   }
+}
+
+string prefix_css(string prefix, string data)
+{
+  data = CSSMin(1)->minify(data);
+
+  int len = sizeof(data);
+  int pos = 0;
+  int(0..1) in_media = 0;
+  String.Buffer buf = String.Buffer();
+
+  prefix = Protocols.HTTP.uri_decode(prefix);
+
+  for (int i; i < len; i++) {
+
+    //if (data[i] == ' ') continue;
+
+    pos = search(data, "{", i);
+
+    if (in_media) {
+      int pend = search(data, "}", i);
+
+      if (pend > -1 && pend < pos) {
+        buf->add(data[i..pend] + "\n");
+        i = pend + 1;
+        pos = search(data, "{", i);
+        in_media = 0;
+      }
+    }
+
+    if (pos == -1) {
+      buf->add(data[i..]);
+      break;
+    }
+
+    string part = TRIM(data[i..pos-1]);
+
+    if (part[0] == '@') {
+      buf->add(part + " {\n");
+      i = pos;
+      in_media = 1;
+      continue;
+    }
+
+    part = map(part/",", lambda (string s) {
+      return prefix + " " + TRIM(replace(s, "\n", ""));
+    }) * ", ";
+
+    buf->add(part);
+
+    i = pos;
+    pos = search(data, "}", i);
+
+    if (pos == -1) {
+      werror ("Badly formatted CSS\n");
+      return data;
+    }
+
+    buf->add(data[i..pos] + "\n");
+
+    i = pos;
+  }
+
+  return buf->get();
 }
 
 //| Using the jsmin algorithm originally by Douglas Crockford
@@ -330,6 +400,13 @@ class CSSMin // {{{
   constant WHITES = (< ' ','\t','\n' >);
   constant WHITES_DELIMS = DELIMITERS + WHITES;
 
+  private int(0..1) linewrap = 0;
+
+  void create(void|int(0..1) _linewrap)
+  {
+    linewrap = _linewrap;
+  }
+
   string minify(string css)
   {
 #define next css[i+1]
@@ -414,6 +491,7 @@ class CSSMin // {{{
 
         case '}':
           add(css[i..i], "");
+          if (linewrap) add("\n");
           continue outer;
       }
       add(css[i..i]);
