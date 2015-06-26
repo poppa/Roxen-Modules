@@ -16,18 +16,18 @@ inherit "module";
 
 inherit "roxen-module://social-tagset" : tagset;
 
-//#define LINKEDIN_DEBUG
+#define GITHUB_DEBUG
 
-#ifdef LINKEDIN_DEBUG
-# define TRACE(X...) report_debug("Linkedin (%3d): %s", __LINE__, sprintf(X))
+#ifdef GITHUB_DEBUG
+# define TRACE(X...) report_debug("Github (%3d): %s", __LINE__, sprintf(X))
 #else
 # define TRACE(X...) 0
 #endif
 
 #define _ok RXML_CONTEXT->misc[" _ok"]
-/* The Ln Authorization object */
-#define LN  id->misc->linkedin
-#define LN_AUTH  id->misc->linkedin->authorization
+/* The Github Authorization object */
+#define GH  id->misc->github
+#define GH_AUTH  id->misc->github->authorization
 
 #define SET_COOKIE(V) Roxen.set_cookie(id, cookie_name, \
                                        encode_cookie(encode_value(V)), -1, 0, "/")
@@ -35,14 +35,14 @@ inherit "roxen-module://social-tagset" : tagset;
 
 constant thread_safe = 1;
 constant module_type = MODULE_TAG;
-constant module_name = "Poppa Tags: Linkedin";
-constant module_doc  = "Tagset for Linkedin autentication and communication.";
+constant module_name = "Poppa Tags: Github";
+constant module_doc  = "Tagset for Github autentication and communication.";
 
 Configuration conf;
 
-constant plugin_name = "linkedin";
-constant cookie_name = "lnsession";
-constant Klass = RoxenLinkedin;
+constant plugin_name = "github";
+constant cookie_name = "ghsession";
+constant Klass = RoxenGithub;
 constant SOCIAL_MAIN_MODULE = 0;
 
 private DataCache dcache = DataCache();
@@ -58,58 +58,58 @@ void start(int when, Configuration _conf){}
 
 multiset(string) query_provides() { return 0; }
 
-class TagLinkedin
+class TagGithub
 {
   inherit tagset::TagSocial;
-  constant name = "linkedin";
+  constant name = "github";
 
   RXML.TagSet internal = RXML.TagSet(
-    this_module(), "TagLinkedin", ({
-      TagLinkedinLoginUrl(),
-      TagLinkedinLogin(),
-      TagLinkedinLogout(),
-      TagLinkedinEmitRequest()
+    this_module(), "TagGithub", ({
+      TagGithubLoginUrl(),
+      TagGithubLogin(),
+      TagGithubLogout(),
+      TagGithubEmitRequest()
     })
   );
 
   // Login URL
-  class TagLinkedinLoginUrl
+  class TagGithubLoginUrl
   {
     inherit TagSocialLoginUrl;
-    constant name = "ln-login-url";
+    constant name = "gh-login-url";
 
     string do_login_url(mapping args, RequestID id)
     {
-      TRACE("Login URL in Ln: %O!\n", LN_AUTH->get_scope());
+      TRACE("Login URL in Github: %O!\n", GH_AUTH->get_scope());
       return ::do_login_url(args, id);
     }
   }
 
-  class TagLinkedinLogin
+  class TagGithubLogin
   {
     inherit TagSocialLogin;
-    constant name = "ln-login";
+    constant name = "gh-login";
 
     array do_login(mapping args, RequestID id)
     {
       array data = ::do_login(args, id);
-      TRACE ("do_login in Ln: %O\n\n", data);
+      TRACE ("do_login in Github: %O\n\n", data);
 
       if (data && sizeof(data) && args->variable)
         RXML.user_set_var(args->variable, data[0]);
     }
   }
 
-  class TagLinkedinLogout
+  class TagGithubLogout
   {
     inherit TagSocialLogout;
-    constant name = "ln-logout";
+    constant name = "gh-logout";
   }
 
-  class TagLinkedinEmitRequest // {{{
+  class TagGithubEmitRequest // {{{
   {
     inherit TagEmitSocialRequest;
-    constant plugin_name = "ln-request";
+    constant plugin_name = "gh-request";
 
     array do_request(mapping args, RequestID id)
     {
@@ -127,7 +127,7 @@ class TagLinkedin
       }
 
       mapping p = do_get_params(args, id);
-      RoxenLinkedin api = api_instance(id);
+      RoxenGithub api = api_instance(id);
 
       mixed err = catch {
         function f = api[args->method];
@@ -135,7 +135,7 @@ class TagLinkedin
         TRACE("Function: %O(%O, %O)\n", f, args->query, p);
 
         if (f) {
-          mapping res = f(args->query, p);
+          mapping|array res = f(args->query, p);
 
           TRACE("Res: %O\n", res);
 
@@ -147,7 +147,12 @@ class TagLinkedin
             else
               ret = r;
           }
-          else if (res) ret = ({ res });
+          else if (res) {
+            if (mappingp(res))
+              ret = ({ res });
+            else
+              ret = res;
+          }
 
           if (res && !args["no-cache"]) {
             int len = (args->cache && (int)args->cache) || 600;
@@ -159,8 +164,8 @@ class TagLinkedin
       };
 
       if (err) {
-        report_error("Error in linkedin.pike: %s\n", describe_error(err));
-        RXML.user_set_var("var.ln-error", describe_error(err));
+        report_error("Error in github.pike: %s\n", describe_backtrace(err));
+        RXML.user_set_var("var.gh-error", describe_error(err));
       }
 
       return ({});
@@ -168,10 +173,11 @@ class TagLinkedin
   }
 }
 
-class RoxenLinkedin
+class RoxenGithub
 {
-  inherit Social.Linkedin;
+  inherit Social.Github;
 }
+
 
 private class TagSocialBanAdd {}
 private class TagSocialBanRemove {}

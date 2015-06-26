@@ -43,6 +43,8 @@ Configuration conf;
 constant plugin_name = "gplus";
 constant cookie_name = "gpsession";
 constant Klass = RoxenGooglePlus;
+constant SOCIAL_MAIN_MODULE = 0;
+
 private DataCache dcache = DataCache();
 
 void create(Configuration _conf)
@@ -53,6 +55,8 @@ void create(Configuration _conf)
 }
 
 void start(int when, Configuration _conf){}
+
+multiset(string) query_provides() { return 0; }
 
 class TagGooglePlus
 {
@@ -170,3 +174,9 @@ class RoxenGooglePlus
 {
   inherit Social.Google.Plus;
 }
+
+private class TagSocialBanAdd {}
+private class TagSocialBanRemove {}
+private class TagEmitBans {}
+private class TagEmitSubscope {}
+private class TagTimeToDuration {}

@@ -7,7 +7,7 @@
 // Tab width: 8
 // Indent width: 2
 
-#define UTILS_DEBUG
+//#define UTILS_DEBUG
 
 #ifdef UTILS_DEBUG
 # define TRACE(X...) werror("%s:%d: %s", basename(__FILE__), __LINE__, sprintf(X))
@@ -53,7 +53,7 @@ class TagJsonFormat
         encode_flags |= Standards.JSON.HUMAN_READABLE;
       if (string canon = args["canonical"]) {
         if (canon != "pike")
-          RXML.parse_error ("Unknown canonical form %q requested.\n", canon);
+          RXML.parse_error("Unknown canonical form %q requested.\n", canon);
         encode_flags |= Standards.JSON.PIKE_CANONICAL;
       }
 
@@ -81,6 +81,7 @@ class TagJsonFormat
   }
 }
 
+#if 0
 class TagJsonParse
 {
   inherit RXML.Tag;
@@ -107,6 +108,7 @@ class TagJsonParse
     }
   }
 }
+#endif
 
 class TagIfHasValue // {{{
 {
@@ -138,13 +140,34 @@ class TagIfHasValue // {{{
     switch (a)
     {
       case "value":
-        return has_value(v, args->value);
+        return v && has_value(v, args->value);
       case "index":
-        return has_index(v, args->value);
+        return v && has_index(v, args->value);
     }
     return 0;
   }
 } // }}}
+
+class TagIfRoxenTrue
+{
+  inherit RXML.Tag;
+  constant name = "if";
+  constant plugin_name = "roxen-true";
+
+  mapping(string:RXML.Type) req_arg_types = ([
+  ]);
+
+  mapping(string:RXML.Type) opt_arg_types = ([
+  ]);
+
+  int eval(mixed a, RequestID id, mapping args)
+  {
+    mixed v = RXML.user_get_var(a);
+
+    int(0..1) ok = objectp(v) && v == Roxen.true;
+    return ok;
+  }
+}
 
 class TagIfIsVisibe // {{{
 {
@@ -167,7 +190,7 @@ class TagIfIsVisibe // {{{
 
 #undef NORMALIZE_DATE
 
-    TRACE ("%s = %s <> %s\n", now, f, t);
+    TRACE("%s = %s <> %s\n", now, f, t);
 
     if (f == "never" || t == "never")
       return 0;
@@ -291,18 +314,21 @@ class TagEmitJSON // {{{
     if (e)
       TRACE("Error: %O\n", describe_backtrace(e));
 
-    if ( ret && args["group-by"] ) {
+    if (ret && args["group-by"]) {
       string g = args["group-by"];
       mapping ids = ([]);
       array t = ({});
 
       foreach (ret, mapping m) {
-        if ( !ids[m[g]] ) {
+        if (!ids[m[g]]) {
           m->__count = 1;
           ids[m[g]] = m;
+          ids[m[g]]->__children = ({ m });
         }
-        else
+        else {
           ids[m[g]]->__count++;
+          ids[m[g]]->__children += ({ m });
+        }
       }
 
       ret = values(ids);
@@ -389,6 +415,121 @@ class TagJSON // {{{
 } // }}}
 
 #endif
+
+class TagMinify
+{
+  inherit RXML.Tag;
+  constant name = "minify";
+
+  mapping(string:RXML.Type) req_arg_types = ([
+    // "attribute" : RXML.t_text(RXML.PEnt)
+  ]);
+
+  mapping(string:RXML.Type) opt_arg_types = ([
+    // "attribute" : RXML.t_text(RXML.PEnt)
+  ]);
+
+  class Frame
+  {
+    inherit RXML.Frame;
+
+    array do_return(RequestID id)
+    {
+      string src = args->src || args->href;
+
+      if (!src) {
+        if (!sizeof(content)) {
+          RXML.parse_error("Missing required attribute \"src\" or \"href\"!");
+          return 0;
+        }
+
+        if (!args->type) {
+          RXML.parse_error("Missing required attribute \"type\" when no "
+                           "\"src\" or \"href\" is given!");
+
+          return 0;
+        }
+
+        if (!(< "css", "js", "js2" >)[lower_case(args->type)]) {
+          RXML.parse_error("Type attribute must be \"css\", \"js\" or \"js2\"!");
+          return 0;
+        }
+
+        switch (lower_case(args->type)) {
+          case "css":
+            if (args->raw) result = Standards.CSS.minify(content);
+            else
+              result = "<style>" + Standards.CSS.minify(content) + "</style>";
+            return 0;
+
+          case "js":
+            if (args->raw) result = Standards.JavaScript.minify(content);
+            else
+              result = "<script>" + Standards.JavaScript.minify(content) +
+                       "</script>";
+            return 0;
+
+#if constant(Standards.JavaScript.minify2)
+          case "js2":
+            if (args->raw) result = Standards.JavaScript.minify2(content);
+            else
+              result = "<script>" + Standards.JavaScript.minify2(content) +
+                       "</script>";
+#endif
+            return 0;
+        }
+
+      }
+
+      array(string) t = src / ".";
+
+      if (!sizeof(t)) {
+        RXML.parse_error("Badly formatted attribute. Need a file extension!");
+        return 0;
+      }
+
+      string ext = lower_case(t[-1]);
+
+      if (!(< "js", "css" >)[ext]) {
+        RXML.parse_error("Unhandled filetype. Expected \".js\" or \".css\"!");
+        return 0;
+      }
+
+
+      string mintype, tagname, attrname;
+
+      if (ext == "js") {
+        tagname = "script";
+        attrname = "src";
+
+        if (!args->type)
+          mintype = "jsmin";
+        else
+          mintype = args->type == "js2" ? "jsmin2" : "jsmin";
+      }
+      else if (ext == "css") {
+        tagname = "link";
+        attrname = "href";
+        mintype = "css";
+      }
+
+
+      if (args->type)
+        m_delete(args, "type");
+
+      args[attrname] = Roxen.add_pre_state(src, (< mintype >));
+
+      if (tagname == "script")
+        result = Roxen.make_container(tagname, args, "", 1);
+      else
+        result = Roxen.make_tag(tagname, args, 0, 1);
+
+
+
+      return 0;
+    }
+  }
+}
 
 class TagEmitEnv // {{{
 {
@@ -997,7 +1138,8 @@ class TagSafeJS // {{{
     "add"    : RXML.t_text(RXML.PEnt),
     "get"    : RXML.t_text(RXML.PEnt),
     "script" : RXML.t_text(RXML.PEnt),
-    "onload" : RXML.t_text(RXML.PEnt)
+    "onload" : RXML.t_text(RXML.PEnt),
+    "minify" : RXML.t_text(RXML.PEnt)
   ]);
 
   class Frame
@@ -1049,6 +1191,9 @@ class TagSafeJS // {{{
                      ({ "&lt;", "&gt;", "&amp;" }),
                      ({ "<",    ">",    "&"     }));
 
+          if (args->minify)
+            s = Standards.JavaScript.minify(s);
+
           result += "<script>" + s + "</script><noscript></noscript>";
 
           id->misc->js_tail = 0;
@@ -1064,6 +1209,9 @@ class TagSafeJS // {{{
           if (args->onload)
             s = "$(function() { " + s + " });";
 
+          if (args->minify)
+            s = Standards.JavaScript.minify(s);
+
           result = "<script>" + s + "</script><noscript></noscript>";
         }
       }
@@ -1074,6 +1222,37 @@ class TagSafeJS // {{{
     }
   }
 } // }}}
+
+class TagCssMin
+{
+  inherit RXML.Tag;
+  constant name = "css-min";
+
+  mapping(string:RXML.Type) req_arg_types = ([
+    // "attribute" : RXML.t_text(RXML.PEnt)
+  ]);
+
+  mapping(string:RXML.Type) opt_arg_types = ([
+    // "attribute" : RXML.t_text(RXML.PEnt)
+  ]);
+
+  class Frame
+  {
+    inherit RXML.Frame;
+
+    array do_return(RequestID id)
+    {
+
+#if constant(Standards.CSS)
+      result = "<style>" + Standards.CSS.minify(content) + "</style>";
+#else
+      result = "<style>" + content + "</style>";
+#endif
+
+      return 0;
+    }
+  }
+}
 
 
 class TagMD5 // {{{
@@ -1442,13 +1621,17 @@ class TagStripTags // {{{
   string paragraphify(string s)
   {
     // more than one newline is considered a new paragraph
-    return
-      "<p>"+ ((
-        replace(
+    array(string) ss = (replace(
           replace(s - "\r" - "\0", "\n\n", "\0"),
           "\0\n", "\0"
-        )/"\0") - ({ "\n", "" })
-      )*("</p><p>") + "</p>";
+        )/"\0") - ({ "\n", "" });
+
+    return map(ss, lambda(string x) {
+      if (!has_prefix(lower_case(x), "<p"))
+        return "<p>" + x + "</p>";
+
+      return x;
+    }) * "";
   }
 
   string unparagraphify(string s)
@@ -2298,13 +2481,19 @@ class TagEmitAttachment // {{{
 
     foreach (id->real_variables; string key; array value) {
       if ((sscanf(key, pf+"%*d.%*s") == 1)) {
-        res += ({
-          ([ "content"  : value[0],
-             "mimetype" : id->real_variables[key+".mimetype"][0],
-             "filename" : id->real_variables[key+".filename"][0],
-             "length"   : sizeof( value[0] )
-          ])
-        });
+        mixed e = catch {
+          res += ({
+            ([ "content"  : value[0],
+               "mimetype" : id->real_variables[key+".mimetype"][0],
+               "filename" : id->real_variables[key+".filename"][0],
+               "length"   : sizeof(value[0])
+            ])
+          });
+        };
+
+        if (e) {
+          TRACE("Unable to handle %s! %s\n", key, describe_error(e));
+        }
       }
     }
 

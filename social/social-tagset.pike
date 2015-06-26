@@ -24,17 +24,28 @@ inherit "module";
 # define TRACE(X...) 0
 #endif
 
+#define SOCIAL_DB_MODULE
+
+constant SOCIAL_MAIN_MODULE = 1;
+
 constant thread_safe = 1;
-constant module_type = MODULE_TAG;
+constant module_type = MODULE_TAG|MODULE_PROVIDER;
 constant module_name = "Poppa Tags: Social";
 constant module_doc  = "Base tagset for autentication and communication with "
                        "social APIs.";
 
+string my_program_name;
+
 Configuration conf;
+protected final string dbname;
 
 void create(Configuration _conf)
 {
   set_module_creator("Pontus Östlund <poppanator@gmail.com>");
+
+  my_program_name = sprintf("%O", object_program(this));
+
+  TRACE("my_program_name: %s\n", my_program_name);
 
   defvar("api_key",
          Variable.String("", 0, "API key", "Default API key"));
@@ -49,12 +60,161 @@ void create(Configuration _conf)
   defvar("redirect_uri",
          Variable.String("", 0, "Redirect URI", "Where should the user return "
                                                 "to after authorization"));
-
   defvar("default_scopes",
          Variable.String("", 0, "Default scopes", "Default app permissions"));
 
+  if (SOCIAL_MAIN_MODULE) {
+    defvar("db_name",
+      Variable.DatabaseChoice(
+        "tvab", 0,
+        "Social database",
+        "The database where we store stuff"
+      )->set_configuration_pointer(my_configuration)
+    );
+  }
+
   conf = _conf;
 }
+
+void start(int when, Configuration _conf)
+{
+  mixed e = catch {
+    if (SOCIAL_MAIN_MODULE) {
+      dbname = query("db_name");
+      if (when == 0 && dbname != " none")
+        init_db();
+    }
+  };
+
+  if (e) {
+    report_error("social-tagset.pike: Unable to init db. Try reloading "
+                 "the module!\n%s\n", describe_error(e));
+  }
+}
+
+private final void init_db()
+{
+  mapping perms = DBManager.get_permission_map()[dbname];
+
+  if (!get_db()) {
+    if (perms && perms[conf->name] == DBManager.NONE) {
+      error("No permission to read Social database: %s\n", dbname);
+      return;
+    }
+
+    report_notice("No comments database present. Creating \"%s\".\n", dbname);
+
+    if(!DBManager.get_group("platform")) {
+      DBManager.create_group("platform",
+        "Roxen platform",
+        "Various databases used by the Roxen "
+        "Platform modules",
+        ""
+      );
+    }
+
+    DBManager.create_db(dbname, 0, 1, "platform");
+    DBManager.set_permission(dbname, conf, DBManager.WRITE);
+    perms = DBManager.get_permission_map()[dbname];
+    DBManager.is_module_db(0, dbname,
+                           "Used by the Social tagset to "
+                           "store its data.");
+    if (!get_db()) {
+      error("Unable to create Social database.\n");
+      return;
+    }
+  }
+
+  if (perms && perms[conf->name] == DBManager.WRITE)
+    setup_tables();
+}
+
+//#define q(X...) get_db()->query(X)
+
+private array(mapping) q(mixed ... args)
+{
+  mixed e = catch {
+    return get_db()->query(@args);
+  };
+
+  werror("social-tagset.pike:%d: %s\n", __LINE__, describe_error(e));
+
+  return ({});
+}
+
+private void setup_tables()
+{
+  if (Sql.Sql db = get_db()) {
+    q(#"
+      CREATE TABLE IF NOT EXISTS `social_ban` (
+        `id` INT NOT NULL AUTO_INCREMENT,
+        `objectid` VARCHAR(255) NULL,
+        `application` VARCHAR(255) NULL,
+        `service` VARCHAR(255) NULL,
+        PRIMARY KEY (`id`)
+      )"
+    );
+  }
+}
+
+#ifdef SOCIAL_DB_MODULE
+
+multiset(string) query_provides() { return (< "social" >); }
+
+public final array(mapping) get_bans(void|string application,
+                                     void|string service)
+{
+  string sql = "SELECT * FROM social_ban";
+
+  if (application && service) {
+    sql += sprintf(" WHERE application=\"%s\" AND service=\"%s\"",
+                   DB.Sql.quote(application),
+                   DB.Sql.quote(service));
+  }
+  else if (application) {
+    sql += sprintf(" WHERE application=\"%s\"", DB.Sql.quote(application));
+  }
+  else if (service) {
+    sql += sprintf(" WHERE service=\"%s\"", DB.Sql.quote(service));
+  }
+
+  return q(sql);
+}
+
+public final void ban(string objectid, string service, void|string application)
+{
+  array(DB.Sql.String) f = ({
+    DB.Sql.String("objectid", objectid),
+    DB.Sql.String("service", service)
+  });
+
+  if (application && sizeof(application))
+    f += ({ DB.Sql.String("application", application) });
+
+  TRACE("Fields: %O\n", f);
+
+  string sql = "INSERT INTO social_ban (%s) VALUES (%s)";
+  q(sprintf(sql, f->get_quoted_name()*",", f->get_quoted()*","));
+}
+
+public final void remove_ban(string objectid, string service,
+                             void|string application)
+{
+  string sql = sprintf("DELETE FROM social_ban "
+                       "WHERE objectid=\"%s\" AND service=\"%s\"",
+                       DB.Sql.quote(objectid), DB.Sql.quote(service));
+  if (application)
+    sql += sprintf(" AND application=\"%s\"", DB.Sql.quote(application));
+
+  q(sql);
+}
+
+private Sql.Sql get_db()
+{
+  return DBManager.get(dbname, conf);
+}
+
+#endif
 
 constant plugin_name = "social";
 protected constant cookie_name = "socialsess";
@@ -86,8 +246,6 @@ protected void remove_cookie(RequestID id)
 {
   Roxen.remove_cookie(id, cookie_name, "", 0, "/");
 }
-
-void start(int when, Configuration _conf){}
 
 class TagSocial
 {
@@ -344,7 +502,7 @@ class TagSocial
     }
   }
 
-  class TagEmitSocialRequest // {{{
+  class TagEmitSocialRequest
   {
     inherit RXML.Tag;
     constant name = "emit";
@@ -368,8 +526,10 @@ class TagSocial
       array(string) keys = indices(req_arg_types) + indices(opt_arg_types);
 
       foreach (args; string k; mixed v)
-        if (!has_value(keys, k) && k != "source")
-          params[k] = v;
+        if (!has_value(keys, k) && k != "source") {
+          if (v && sizeof((string) v))
+            params[k] = v;
+        }
 
       return params;
     }
@@ -407,8 +567,82 @@ class TagSocial
   }
 }
 
-//! Emit weather forecast
-class TagEmitSubscope // {{{
+#ifdef SOCIAL_MAIN_MODULE
+
+class TagSocialBanAdd
+{
+  inherit RXML.Tag;
+  constant name = "social-ban-add";
+
+  mapping(string:RXML.Type) req_arg_types = ([
+    "objectid" : RXML.t_text(RXML.PXml),
+    "service" : RXML.t_text(RXML.PXml)
+  ]);
+
+  mapping(string:RXML.Type) opt_arg_types = ([
+    "application" : RXML.t_text(RXML.PXml)
+  ]);
+
+  class Frame
+  {
+    inherit RXML.Frame;
+
+    array do_return(RequestID id)
+    {
+      TRACE("Ban: %O\n", args);
+      ban(args->objectid, args->service, args->application);
+      return 0;
+    }
+  }
+}
+
+class TagSocialBanRemove
+{
+  inherit RXML.Tag;
+  constant name = "social-ban-remove";
+
+  mapping(string:RXML.Type) req_arg_types = ([
+    "objectid" : RXML.t_text(RXML.PXml),
+    "service" : RXML.t_text(RXML.PXml)
+  ]);
+
+  mapping(string:RXML.Type) opt_arg_types = ([
+    "application" : RXML.t_text(RXML.PXml)
+  ]);
+
+  class Frame
+  {
+    inherit RXML.Frame;
+
+    array do_return(RequestID id)
+    {
+      remove_ban(args->objectid, args->service, args->application);
+      return 0;
+    }
+  }
+}
+
+class TagEmitBans
+{
+  inherit RXML.Tag;
+  constant name = "emit";
+  constant plugin_name = "social-bans";
+
+  mapping(string:RXML.Type) req_arg_types = ([
+  ]);
+
+  mapping(string:RXML.Type) opt_arg_types = ([
+    "service" : RXML.t_text(RXML.PXml),
+    "application" : RXML.t_text(RXML.PXml)
+  ]);
+
+  array get_dataset(mapping args, RequestID id)
+  {
+    return get_bans(args->application, args->service);
+  }
+}
+
+class TagEmitSubscope
 {
   inherit RXML.Tag;
   constant name = "emit";
@@ -430,7 +664,7 @@ class TagEmitSubscope // {{{
 
     return var && ({ var }) || ({});
   }
-} // }}}
+}
 
 class TagTimeToDuration
 {
@@ -457,6 +691,10 @@ class TagTimeToDuration
 
       mixed err = catch {
         if (args["iso-time"]) {
+          /*
+          if (sscanf(args["iso-time"], "%*4d-%*2d-%*2dT") == 3)
+            args["iso-time"] = replace(args["iso-time"], "T", " ");
+          */
           s = Calendar.dwim_time(args["iso-time"]);
         }
         else if (args->timestamp) {
@@ -472,7 +710,7 @@ class TagTimeToDuration
             s->set_timezone(args->timezone);
           };
 
-          if (e) werror("Timezone error: %s\n", describe_backtrace(e));
+          if (e) report_error("Timezone error: %s\n", describe_backtrace(e));
         }
 
         if (args->hours && s) {
@@ -485,7 +723,7 @@ class TagTimeToDuration
       };
 
       if (err) {
-        werror("time-to-duration: %s\n", describe_error(err));
+        report_error("time-to-duration: %s\n", describe_error(err));
         result = args["iso-time"] || args["timestamp"];
       }
 
@@ -493,6 +731,8 @@ class TagTimeToDuration
     }
   }
 }
+
+#endif /* SOCIAL_MAIN_MODULE */
 
 //! Human readable representation of @[timestamp].
 //!
@@ -531,6 +771,7 @@ protected string time_elapsed(int timestamp)
 
 protected mixed get_selection(mapping data, string sel)
 {
+  if (!data) return 0;
   array p = sel/".";
   int s = sizeof(p);
   if (s > 0)

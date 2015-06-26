@@ -396,15 +396,15 @@ class TagTablify2
         map->style += ({ "text-align:" + args->align[i] });
 
       if (i == 0) {
-        if ( args["first-cell-style"] )
+        if (args["first-cell-style"])
           map->style += ({ args["first-cell-style"] });
-        if ( args["first-cell-class"] )
+        if (args["first-cell-class"])
           map["class"] += ({ args["first-cell-class"] });
       }
       else if (i == args->flood-1) {
-        if ( args["last-cell-style"] )
+        if (args["last-cell-style"])
           map->style += ({ args["last-cell-style"] });
-        if ( args["last-cell-class"] )
+        if (args["last-cell-class"])
           map["class"] += ({ args["last-cell-class"] });
       }
 
@@ -484,7 +484,7 @@ class TagTablify2
     args->state = PageState(id);
 
     if (id->real_variables->__state)
-      args->state->uri_decode( id->real_variables->__state[0] );
+      args->state->uri_decode(id->real_variables->__state[0]);
 
     // If append-query is used we need to save the stuff we write to id->query
     // so that we can remove it from id->query before leaving the tag. If not
@@ -684,19 +684,19 @@ class TagTablify2
     if (titles) rows = titles + rows;
 
     if (args->pager && args->pages > 1) {
-      args->_pager = "<div class='tablify-pager'><ul>\n";
+      args->_pager = "<div class='tablify-pager'><ul>";
       for (int i = 0; i < args->pages; i++) {
         string uri = args->state->encode_revisit_url(id, i+1,
                                                      args->pager_state_key,
                                                      0, args->url);
         string css = (i == args->page) ? " class='active'" : "";
         args->_pager += sprintf(
-          "<li%s><a href='%s#%s'>%d</a></li>\n",
+          "<li%s><a href='%s#%s'>%d</a></li>",
           css, uri, args->state_id, (i+1)
         );
       }
 
-      args->_pager += "</ul><span class='break'/></div>\n";
+      args->_pager += "</ul><span class='break'/></div>";
 
       if (args->pagervar)
         RXML.user_set_var(args->pagervar, args->_pager);
@@ -723,15 +723,15 @@ class TagTablify2
   // Create the resultning table
   string mk_table(array rows, mapping args, RequestID id) // {{{
   {
-    string table = "<table", tbod = "<tbody>\n", thead = "<thead>\n";
+    string table = "<table", tbod = "<tbody>", thead = "<thead>";
     mapping attr = ([]);
     attr->id = args->state_id;
     attr += set_attr_args(_tblargs + _commonargs, args);
-    table += mk_attr(attr) + ">\n";
+    table += mk_attr(attr) + ">";
     attr = 0;
 
     if (args->caption)
-      table += "<caption>" + args->caption + "</caption>\n";
+      table += "<caption>" + args->caption + "</caption>";
 
     foreach (_tblargs; string key;)
       if ( args[key] )
@@ -791,7 +791,7 @@ class TagTablify2
         string attr = mk_attr(([ "class" : args["class"],
                                  "style" : args->style ]));
 
-        thead += "<tr" + attr + ">\n";
+        thead += "<tr" + attr + ">";
         int col = 0;
         string align;
 
@@ -822,15 +822,15 @@ class TagTablify2
           }
 
           align = mk_attr( cell_formats[col-1] );
-          thead += "<th scope='col'" + align + ">" + s + "</th>\n";
+          thead += "<th scope='col'" + align + ">" + s + "</th>";
         }
 
         for (int j = col; j < args->flood; j++) {
           align = mk_attr( cell_formats[j] );
-          thead += "<th scope='col'" + align +"'>" + EMPTY_CELL + "</th>\n";
+          thead += "<th scope='col'" + align +"'>" + EMPTY_CELL + "</th>";
         }
 
-        table += thead + "</tr>\n</thead>\n";
+        table += thead + "</tr></thead>";
         args->notitle = 1;
         thead_set = 1;
         continue;
@@ -843,7 +843,7 @@ class TagTablify2
         if (stringp(fc)) {
           if (sscanf(fc, "[#%s:%s]", string t, string v) == 2) {
             extra_attributes[t] = v;
-            sscanf( row[0], "[#%*s:%*s]%s", row[0] );
+            sscanf(row[0], "[#%*s:%*s]%s", row[0]);
           }
         }
       }
@@ -857,10 +857,10 @@ class TagTablify2
 
       if (lra && i == nrows) {
         string na = merge_row_attr(mod ? era : ora, lra, extra_attributes);
-        table += "<tr" + na + ">\n";
+        table += "<tr" + na + ">";
       }
       else
-        table += "<tr"+merge_row_attr(mod?era:ora,"",extra_attributes)+">\n";
+        table += "<tr"+merge_row_attr(mod?era:ora,"",extra_attributes)+">";
 
       int col = 0;
       string tag, cell_attr;
@@ -869,17 +869,17 @@ class TagTablify2
         col++;
         if (args["row-titles"] && col == 1) {
           tag = "th";
-          cell_attr = mk_attr( cell_formats[0] ) + " scope='row'";
+          cell_attr = mk_attr(cell_formats[0]) + " scope='row'";
         }
         else {
           tag = "td";
-          mapping cell_format = copy_value( cell_formats[col-1] );
+          mapping cell_format = copy_value(cell_formats[col-1]);
 
           if (args->coltype && has_index(args->coltype, col-1)) {
             string coltype = args->coltype[col-1];
 
-            if ( do_sum && NUM_COLS[coltype] ) {
-              if ( INT_COLS[coltype] )
+            if (do_sum && NUM_COLS[coltype]) {
+              if (INT_COLS[coltype])
                 catch (args->sum[col-1] += (int)s);
               else if ( FLOAT_COLS[coltype] )
                 catch (args->sum[col-1] += (float)s);
@@ -922,23 +922,23 @@ class TagTablify2
           cell_format = 0;
         }
         s = sizeof(s) && s || EMPTY_CELL;
-        table += sprintf("<%s%s>%s</%s>\n", tag, cell_attr, s, tag);
+        table += sprintf("<%s%s>%s</%s>", tag, cell_attr, s, tag);
       }
 
       for (int j = col; j < args->flood; j++) {
         table += sprintf(
-          "<td%s>%s</td>\n",
+          "<td%s>%s</td>",
           mk_attr(cell_formats[j] ), EMPTY_CELL
         );
       }
 
-      table += "</tr>\n";
+      table += "</tr>";
 
       i++;
     }
 
     if (thead_set)
-      table += "</tbody>\n";
+      table += "</tbody>";
 
     if (args->tbody && sizeof(args->tbody) && (sizeof(rows) == 0 || (
       sizeof(rows) == 1 && thead_set)))
@@ -949,7 +949,7 @@ class TagTablify2
     TRACE("Coltypes: %O : %O\n", args->coltype, NUM_COLS);
 
     if (do_sum && args->coltype) {
-      table += "<tfoot>\n<tr>\n";
+      table += "<tfoot>\n<tr>";
       i = 0;
 
       TRACE("args->sum(%O)\n", args->sum);
@@ -961,19 +961,19 @@ class TagTablify2
         }
 
         if (floatp(v))
-          table += sprintf("<td%s>%.2f</td>\n", sum_colstyles[i-1]||"", v);
+          table += sprintf("<td%s>%.2f</td>", sum_colstyles[i-1]||"", v);
         else if (intp(v))
-          table += sprintf("<td%s>%d</td>\n", sum_colstyles[i-1]||"", v);
+          table += sprintf("<td%s>%d</td>", sum_colstyles[i-1]||"", v);
       }
 
-      table += "</tr>\n</tfoot>\n";
+      table += "</tr>\n</tfoot>";
     }
     else if (args->tfoot) {
       TRACE("Appending table footer\n");
       table += replace(args->tfoot, ({ "&amp;","&#38;" }), ({ "&","&" }));
     }
 
-    table += "</table>\n";
+    table += "</table>";
 
     return gtext ? Roxen.parse_rxml(table, id) : table;
   } // }}}
@@ -987,6 +987,7 @@ class TagTablify2
 
     string oc = (({ ac, bc, extras["class"] }) - ({ 0 }))*" ";
     string os = (({ as, bs, extras["style"] }) - ({ 0 }))*";";
+
     if (sizeof(os))
       os = unique_styles(os);
 
@@ -995,6 +996,8 @@ class TagTablify2
       out = sprintf(" class=\"%s\"", oc);
     if (sizeof(os))
       out += sprintf(" style=\"%s\"", os);
+    if (extras && extras->id)
+      out += sprintf(" id=\"%s\"", extras->id);
 
     return out;
   } // }}}

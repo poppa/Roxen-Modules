@@ -70,6 +70,7 @@ string mail_server;
 string mail_template;
 string mail_from;
 string mail_subject;
+array(string) banned_users;
 object hook;
 mapping(string:function)
   rollback_action = ([]), //| Action to run when operation is discarded
@@ -168,6 +169,14 @@ void create(Configuration _conf)
     )
   );
 
+  defvar("banned_users",
+    Variable.Text(
+      "", 0, "Banned users",
+      "These users (usernames) can't leave comments. Space, comma or row "
+      "separated list!"
+    )
+  );
+
   defvar("db_name",
     Variable.DatabaseChoice(
       "comment_" + (conf ? Roxen.short_name(conf->name) : ""), 0,
@@ -200,6 +209,8 @@ void start(int when, Configuration _conf)
     mail_server = query("mail_server");
   }
 
+  banned_users = setup_banned_users(query("banned_users"));
+
   init_db();
   module_dependencies(conf, ({ "sitebuilder" }));
   Site s = site();
@@ -207,6 +218,28 @@ void start(int when, Configuration _conf)
   // Only run hooks on backends
   if (s && s->frontend_mode() == 0)
     connect_hook();
+}
+
+array(string) setup_banned_users(string list)
+{
+  list = String.trim_all_whites(list) - "\r";
+  array(string) tmp = ({});
+  map(list/"\n", lambda (string s) {
+    s = String.trim_all_whites(s);
+    if (!sizeof(s))
+      return 0;
+
+    if (search(s, " ") > -1)
+      s = replace(s, " ", ",");
+
+    map(s/",", lambda (string ss) {
+      ss = String.trim_all_whites(ss);
+      if (sizeof(ss))
+        tmp += ({ lower_case(ss) });
+    });
+  });
+
+  return tmp;
 }
 
 /*
@@ -248,7 +281,6 @@ void clear()
   get_db()->query("TRUNCATE TABLE comments");
   get_db()->query("TRUNCATE TABLE comments_mail");
 }
-
 
 void sb_after_hook(string operation, string path, RequestID id,
                    void|mapping info, object obj)
@@ -796,14 +828,14 @@ void send_mail(int id, string path, mapping user, string email,
                void|string owner_template)
 {
   SqlResult r = q("SELECT t1.id AS id, t1.path AS path, "
-                  "t1.username AS username, t1.email AS email, "
-                  "t1.has_new AS has_new, t1.hash AS hash, "
-                  "t2.author AS author "
+                  " t1.username AS username, t1.email AS email, "
+                  " t1.has_new AS has_new, t1.hash AS hash, "
+                  " t2.author AS author "
                   "FROM comments_mail t1 "
                   "LEFT JOIN comments t2 "
-                  "ON t2.username = t1.username "
+                  " ON t2.username = t1.username "
                   "WHERE t1.path = %s AND t2.visible = 'y' "
-                  "AND t1.notify = '1' "
+                  " AND t1.notify = '1' "
                   "GROUP BY t1.email", path);
 
   int(0..1) insert = 1;
@@ -1132,6 +1164,13 @@ class TagCommentAdd
       int uid = mperm->identity->id() || 0;
       handle = (string)mperm->identity->handle();
 
+      if (handle && sizeof(banned_users)) {
+        if (has_value(banned_users, lower_case(handle))) {
+          _ok = 0;
+          return 0;
+        }
+      }
+
       string owner = (uid == log->userid) ? "y" : "n";
 
       if (!args->author || (args->author && !strlen(args->author))) {
@@ -1246,6 +1285,36 @@ class TagIfCommentAdminPermission
     }
 
     return admin;
+  }
+}
+
+class TagIfCommentBannedUser
+{
+  inherit RXML.Tag;
+  constant name = "if";
+  constant plugin_name = "comment-banned-user";
+
+  int eval(string a, RequestID id, mapping args)
+  {
+    if (!sizeof(banned_users))
+      return 0;
+
+    return has_value(banned_users, lower_case(a));
+  }
+}
+
+class TagEmitCommentBannedUsers
+{
+  inherit RXML.Tag;
+
+  constant name = "emit";
+  constant plugin_name = "comment-banned-users";
+
+  array get_dataset(mapping args, RequestID id)
+  {
+    return map(banned_users, lambda (string s) {
+      return ([ "value" : s ])  ;
+    });
   }
 }
 

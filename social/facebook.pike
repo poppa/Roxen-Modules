@@ -44,6 +44,8 @@ constant plugin_name = "facebook";
 constant cookie_name = "fbsession";
 constant Klass = RoxenFacebook;
 
+constant SOCIAL_MAIN_MODULE = 0;
+
 private DataCache dcache = DataCache();
 
 void create(Configuration _conf)
@@ -54,6 +56,8 @@ void create(Configuration _conf)
 }
 
 void start(int when, Configuration _conf){}
+
+multiset(string) query_provides() { return 0; }
 
 class TagFacebook
 {
@@ -166,6 +170,13 @@ class RoxenFacebook
 {
   inherit Social.Facebook;
 }
+
+
+private class TagSocialBanAdd {}
+private class TagSocialBanRemove {}
+private class TagEmitBans {}
+private class TagEmitSubscope {}
+private class TagTimeToDuration {}
 
 TAGDOCUMENTATION;
 #ifdef manual
