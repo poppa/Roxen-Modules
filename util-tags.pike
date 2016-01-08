@@ -38,13 +38,13 @@ class TagIfHasValue
 
   mapping(string:RXML.Type) opt_arg_types = ([
     "variable" : RXML.t_text(RXML.PXml),
-    "index"    : RXML.t_text(RXML.PXml),
+    "type"     : RXML.t_text(RXML.PXml),
     "haystack" : RXML.t_text(RXML.PXml)
   ]);
 
   int eval(string a, RequestID id, mapping args)
   {
-    mixed v;
+    mixed v, k;
 
     if (args->variable)
       v = RXML.user_get_var(args->variable);
@@ -53,13 +53,25 @@ class TagIfHasValue
     else
       RXML.parse_error("Missing attribute \"variable\" or \"haystack\"!");
 
+    k = args->value;
+
+    if (args->type) {
+      switch (args->type)
+      {
+        case "int":    k = (int)k;    break;
+        case "float":  k = (float)k;  break;
+        case "string": k = (string)k; break;
+      }
+    }
+
     switch (a)
     {
       case "value":
-        return v && has_value(v, args->value);
+        return v && has_value(v, k);
       case "index":
-        return v && has_index(v, args->value);
+        return v && has_index(v, k);
     }
+
     return 0;
   }
 }
