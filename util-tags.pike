@@ -2,10 +2,8 @@
 // This is a Roxen module
 //
 // Misc utility tags
-// Author: Pontus Östlund <pontus@poppa.se>
+// Author: Pontus Östlund <poppanator@gmail.com>
 //
-// Tab width: 8
-// Indent width: 2
 
 //#define UTILS_DEBUG
 
@@ -28,89 +26,7 @@ constant module_doc  = "Misc. RXML tags";
 
 Configuration conf;
 
-class TagJsonFormat
-{
-  inherit RXML.Tag;
-  constant name = "json-format";
-
-  mapping(string:RXML.Type) opt_arg_types = ([
-    "variable": RXML.t_text (RXML.PEnt),
-  ]);
-
-  RXML.Type content_type = RXML.t_any (RXML.PXml);
-
-  class Frame
-  {
-    inherit RXML.Frame;
-
-    array do_return (RequestID id)
-    {
-      int encode_flags;
-
-      if (args["ascii-only"])
-        encode_flags |= Standards.JSON.ASCII_ONLY;
-      if (args["human-readable"])
-        encode_flags |= Standards.JSON.HUMAN_READABLE;
-      if (string canon = args["canonical"]) {
-        if (canon != "pike")
-          RXML.parse_error("Unknown canonical form %q requested.\n", canon);
-        encode_flags |= Standards.JSON.PIKE_CANONICAL;
-      }
-
-      if (args->value)
-        content = args->value;
-      else if (string var = args->variable) {
-        if (zero_type (content = RXML.user_get_var (var)))
-          parse_error ("Variable %q does not exist.\n", var);
-      }
-
-      if (mixed err =
-        catch (result = Standards.JSON.encode (content, encode_flags)))
-      {
-        RXML.run_error (describe_error (err));
-      }
-
-      if (!args["no-xml-quote"]) {
-        result = replace (result, ([
-                  "&": "\\u0026",
-                  "<": "\\u003c",
-                  ">": "\\u003e",
-                 ]));
-      }
-    }
-  }
-}
-
-#if 0
-class TagJsonParse
-{
-  inherit RXML.Tag;
-  constant name = "json-parse";
-
-  RXML.Type content_type = RXML.t_any_text (RXML.PXml);
-  array(RXML.Type) result_types = ({RXML.t_any});
-
-  class Frame
-  {
-    inherit RXML.Frame;
-
-    array do_return (RequestID id)
-    {
-      if (args->value)
-        content = args->value;
-      else if (string var = args->variable) {
-        if (zero_type (content = RXML.user_get_var (var)))
-          parse_error ("Variable %q does not exist.\n", var);
-      }
-
-      if (mixed err = catch (result = Standards.JSON.decode (content)))
-        RXML.run_error (describe_error (err));
-    }
-  }
-}
-#endif
-
-class TagIfHasValue // {{{
+class TagIfHasValue
 {
   inherit RXML.Tag;
   constant name = "if";
@@ -122,7 +38,7 @@ class TagIfHasValue // {{{
 
   mapping(string:RXML.Type) opt_arg_types = ([
     "variable" : RXML.t_text(RXML.PXml),
-    "value"    : RXML.t_text(RXML.PXml),
+    "index"    : RXML.t_text(RXML.PXml),
     "haystack" : RXML.t_text(RXML.PXml)
   ]);
 
@@ -135,7 +51,7 @@ class TagIfHasValue // {{{
     else if (args->haystack)
       v = args->haystack;
     else
-      RXML.parse_error ("Missing attribute \"variable\" or \"haystack\"!");
+      RXML.parse_error("Missing attribute \"variable\" or \"haystack\"!");
 
     switch (a)
     {
@@ -146,7 +62,7 @@ class TagIfHasValue // {{{
     }
     return 0;
   }
-} // }}}
+}
 
 class TagIfRoxenTrue
 {
@@ -169,7 +85,7 @@ class TagIfRoxenTrue
   }
 }
 
-class TagIfIsVisibe // {{{
+class TagIfIsVisibe
 {
   inherit RXML.Tag;
   constant name = "if";
@@ -206,9 +122,9 @@ class TagIfIsVisibe // {{{
 
     return 1;
   }
-} // }}}
+}
 
-class TagIfEmpty // {{{
+class TagIfEmpty
 {
   inherit RXML.Tag;
   constant name = "if";
@@ -224,7 +140,7 @@ class TagIfEmpty // {{{
     array(string) x = map(a/(args->split||","), String.trim_all_whites);
     array(string) or = ({}), values = ({});
 
-    if ( args["or-has-value"] )
+    if (args["or-has-value"])
       or = map(args["or-has-value"]/(args->split||","), String.trim_all_whites);
 
     foreach (x, string z) {
@@ -236,9 +152,9 @@ class TagIfEmpty // {{{
 
     return sizeof(values) == 0;
   }
-} // }}}
+}
 
-class TagIfSearch // {{{
+class TagIfSearch
 {
   inherit RXML.Tag;
   constant name = "if";
@@ -271,10 +187,10 @@ class TagIfSearch // {{{
 
     return search(args->in, a) > -1;
   }
-} // }}}
+}
 
 #if constant(Standards.JSON)
-class TagEmitJSON // {{{
+class TagEmitJSON
 {
   inherit RXML.Tag;
   constant name = "emit";
@@ -336,9 +252,9 @@ class TagEmitJSON // {{{
 
     return ret;
   }
-} // }}}
+}
 
-class TagJSON // {{{
+class TagJSON
 {
   inherit RXML.Tag;
   constant name = "json";
@@ -412,7 +328,7 @@ class TagJSON // {{{
       return 0;
     }
   }
-} // }}}
+}
 
 #endif
 
@@ -456,18 +372,22 @@ class TagMinify
         }
 
         switch (lower_case(args->type)) {
+#if constant(Standards.CSS)
           case "css":
             if (args->raw) result = Standards.CSS.minify(content);
             else
               result = "<style>" + Standards.CSS.minify(content) + "</style>";
             return 0;
+#endif
 
+#if constant(Standards.JavaScript)
           case "js":
             if (args->raw) result = Standards.JavaScript.minify(content);
             else
               result = "<script>" + Standards.JavaScript.minify(content) +
                        "</script>";
             return 0;
+#endif
 
 #if constant(Standards.JavaScript.minify2)
           case "js2":
@@ -531,7 +451,7 @@ class TagMinify
   }
 }
 
-class TagEmitEnv // {{{
+class TagEmitEnv
 {
   inherit RXML.Tag;
   constant name = "emit";
@@ -547,46 +467,9 @@ class TagEmitEnv // {{{
 
     return ret;
   }
-} // }}}
+}
 
-class TagAutoLabel // {{{
-{
-  inherit RXML.Tag;
-  constant name = "auto-label";
-
-  mapping(string:RXML.Type) opt_arg_types = ([
-    "idvar" : RXML.t_text(RXML.PEnt)
-  ]);
-
-  class Frame
-  {
-    inherit RXML.Frame;
-
-    array do_return(RequestID id)
-    {
-      string c = content, idvar = args->idvar, xfor = args->for;
-
-      m_delete (args, "idvar");
-
-      if (!id->misc->poppa_clabel)
-        id->misc->poppa_clabel = 0;
-
-      if (!xfor)
-        xfor = "poppa-id" + id->misc->poppa_clabel++;
-
-      args->for = xfor;
-
-      result = Roxen.make_container ("label", args, c);
-
-      if (idvar)
-        RXML.user_set_var (idvar, xfor);
-
-      return 0;
-    }
-  }
-} // }}}
-
-class TagMyCase // {{{
+class TagMyCase
 {
   inherit RXML.Tag;
   constant name = "my-case";
@@ -616,9 +499,9 @@ class TagMyCase // {{{
       return 0;
     }
   }
-} // }}}
+}
 
-class TagLowerCase // {{{
+class TagLowerCase
 {
   inherit RXML.Tag;
   constant name = "lowercase";
@@ -632,9 +515,9 @@ class TagLowerCase // {{{
       result = lower_case(content);
     }
   }
-} // }}}
+}
 
-class TagUpperCase // {{{
+class TagUpperCase
 {
   inherit RXML.Tag;
   constant name = "uppercase";
@@ -648,9 +531,9 @@ class TagUpperCase // {{{
       result = upper_case(content);
     }
   }
-} // }}}
+}
 
-class TagCapitalize // {{{
+class TagCapitalize
 {
   inherit RXML.Tag;
   constant name = "capitalize";
@@ -664,9 +547,9 @@ class TagCapitalize // {{{
       result = String.capitalize(lower_case(content));
     }
   }
-} // }}}
+}
 
-class TagSillyCaps // {{{
+class TagSillyCaps
 {
   inherit RXML.Tag;
   constant name = "sillycaps";
@@ -680,9 +563,9 @@ class TagSillyCaps // {{{
       result = String.sillycaps(lower_case(content));
     }
   }
-} // }}}
+}
 
-class TagNl2br // {{{
+class TagNl2br
 {
   inherit RXML.Tag;
   constant name = "nl2br";
@@ -692,13 +575,13 @@ class TagNl2br // {{{
     array do_return(RequestID id)
     {
       result = content || "";
-      result = replace(replace(result, "\r\n", "\n"), "\n", "<br/>");
+      result = replace(replace(result, "\r\n", "\n"), "\n", "<br>");
       return 0;
     }
   }
-} // }}}
+}
 
-class TagStrip // {{{
+class TagStrip
 {
   inherit RXML.Tag;
   constant name = "strip";
@@ -723,9 +606,9 @@ class TagStrip // {{{
       return 0;
     }
   }
-} // }}}
+}
 
-class TagRedirecrMessage // {{{
+class TagRedirecrMessage
 {
   inherit RXML.Tag;
   constant name = "redirect-message";
@@ -782,31 +665,9 @@ class TagRedirecrMessage // {{{
       return 0;
     }
   }
-} // }}}
+}
 
-class TagEmpty // {{{
-{
-  inherit RXML.Tag;
-  constant name = "empty";
-
-  mapping(string:RXML.Type) req_arg_types = ([
-    "tag" : RXML.t_text(RXML.PEnt)
-  ]);
-
-  class Frame
-  {
-    inherit RXML.Frame;
-    array do_return(RequestID id)
-    {
-      string t = args->tag;
-      m_delete(args, "tag");
-      result = Roxen.make_container(t, args, "");
-      return 0;
-    }
-  }
-} // }}}
-
-class TagCimgAttr // {{{
+class TagCimgAttr
 {
   inherit RXML.Tag;
   constant name = "cimg-attr";
@@ -849,35 +710,9 @@ class TagCimgAttr // {{{
       return 0;
     }
   }
-} // }}}
+}
 
-class TagDumpScope // {{{
-{
-  inherit RXML.Tag;
-  constant name = "dump-scope";
-
-  mapping(string:RXML.Type) req_arg_types = ([
-    "name" : RXML.t_text(RXML.PEnt)
-  ]);
-
-  class Frame
-  {
-    inherit RXML.Frame;
-    array do_return(RequestID id)
-    {
-      string s =
-        "<emit source='values' from-scope='" + args->name + "' sort='index'>"
-        " &_.index;: &_.value;<br/>"
-        "</emit>";
-
-      result = Roxen.parse_rxml(s, id);
-
-      return 0;
-    }
-  }
-} // }}}
-
-class TagCdata // {{{
+class TagCdata
 {
   inherit RXML.Tag;
   constant name = "cdata";
@@ -894,9 +729,9 @@ class TagCdata // {{{
       return 0;
     }
   }
-} // }}}
+}
 
-class TagDump // {{{
+class TagDump
 {
   inherit RXML.Tag;
   constant name = "dump";
@@ -958,68 +793,9 @@ class TagDump // {{{
       return 0;
     }
   }
-} // }}}
+}
 
-class TagClearFloat // {{{
-{
-  inherit RXML.Tag;
-  constant name = "clear-float";
-  mapping(string:RXML.Type) opt_arg_types = ([
-    "type" : RXML.t_text(RXML.PXml),
-    "class" : RXML.t_text(RXML.PXml)
-   ]);
-
-  class Frame
-  {
-    inherit RXML.Frame;
-    array do_return(RequestID id)
-    {
-      string cls = args["class"] || "clear";
-
-      switch (args->type)
-      {
-        case "br":
-          result = "<br class='" + cls + "'/>";
-          break;
-
-        default: result = "<div class='" + cls + "'></div>";
-      }
-
-      return 0;
-    }
-  }
-} // }}}
-
-class TagFormError // {{{
-{
-  inherit RXML.Tag;
-  constant name = "form-error";
-
-  mapping(string:RXML.Type) req_arg_types = ([
-    "id" : RXML.t_text(RXML.PEnt)
-  ]);
-
-  class Frame
-  {
-    inherit RXML.Frame;
-    array do_return(RequestID id)
-    {
-      result =
-      "<script type='text/javascript'>"
-      "/*<![CDATA[*/"
-      "form.error.errors.push({\"id\":\"" + args->id + "\"," +
-        "\"value\":" + Standards.JSON.encode(args->value||content) + "});" +
-      "/*]]>*/"
-      "</script>" +
-      "<span class='form-error' id='msg-" + args->id + "'>" +
-        (args->value||content) + "</span>";
-
-      return 0;
-    }
-  }
-} // }}}
-
-class TagShorten // {{{
+class TagShorten
 {
   inherit RXML.Tag;
   constant name = "shorten";
@@ -1064,9 +840,9 @@ class TagShorten // {{{
       return 0;
     }
   }
-} // }}}
+}
 
-class TagDynamicTemplateRedir // {{{
+class TagDynamicTemplateRedir
 {
   inherit RXML.Tag;
   constant name = "dynamic-template-redirect-url";
@@ -1100,36 +876,11 @@ class TagDynamicTemplateRedir // {{{
       }
     }
   }
-} // }}}
-
-class TagBase64 // {{{
-{
-  inherit RXML.Tag;
-  constant name = "base64";
-
-  mapping(string:RXML.Type) opt_arg_types = ([
-    "encode" : RXML.t_text(RXML.PEnt),
-    "decode" : RXML.t_text(RXML.PEnt),
-    "nobr"   : RXML.t_text(RXML.PEnt)
-  ]);
-
-  class Frame
-  {
-    inherit RXML.Frame;
-    array do_return(RequestID id)
-    {
-      if (args->decode)
-        result = MIME.decode_base64(content);
-      else
-        result = MIME.encode_base64(content, !!args->nobr);
-      return 0;
-    }
-  }
-} // }}}
+}
 
 #define X_USER_NAME (id->misc->scope_user && id->misc->scope_user->username)
 
-class TagSafeJS // {{{
+class TagSafeJS
 {
   inherit RXML.Tag;
   constant name = "safe-js";
@@ -1191,8 +942,10 @@ class TagSafeJS // {{{
                      ({ "&lt;", "&gt;", "&amp;" }),
                      ({ "<",    ">",    "&"     }));
 
+#if constant(Standards.JavaScript)
           if (args->minify)
             s = Standards.JavaScript.minify(s);
+#endif
 
           result += "<script>" + s + "</script><noscript></noscript>";
 
@@ -1209,8 +962,10 @@ class TagSafeJS // {{{
           if (args->onload)
             s = "$(function() { " + s + " });";
 
+#if constant(Standards.JavaScript)
           if (args->minify)
             s = Standards.JavaScript.minify(s);
+#endif
 
           result = "<script>" + s + "</script><noscript></noscript>";
         }
@@ -1221,7 +976,7 @@ class TagSafeJS // {{{
       return 0;
     }
   }
-} // }}}
+}
 
 class TagCssMin
 {
@@ -1255,7 +1010,7 @@ class TagCssMin
 }
 
 
-class TagMD5 // {{{
+class TagMD5
 {
   inherit RXML.Tag;
   constant name = "md5";
@@ -1274,18 +1029,18 @@ class TagMD5 // {{{
       return 0;
     }
   }
-} // }}}
+}
 
-string md5(string in) // {{{
+string md5(string in)
 {
 #if constant(Crypto.MD5)
   return String.string2hex(Crypto.MD5.hash(in));
 #else
   return Crypto.string_to_hex(Crypto.md5()->update(in)->digest());
 #endif
-} // }}}
+}
 
-class TagPadINT // {{{
+class TagPadINT
 // <padint pad="3" separator=",">3000000</padint>
 // resulterar i 3,000,000
 {
@@ -1323,9 +1078,9 @@ class TagPadINT // {{{
       return 0;
     }
   }
-} // }}}
+}
 
-class TagWordWrap // {{{
+class TagWordWrap
 {
   inherit RXML.Tag;
   constant name = "wordwrap";
@@ -1366,9 +1121,9 @@ class TagWordWrap // {{{
       return 0;
     }
   }
-} // }}}
+}
 
-class TagUtf8 // {{{
+class TagUtf8
 {
   inherit RXML.Tag;
   constant name = "utf8";
@@ -1400,9 +1155,9 @@ class TagUtf8 // {{{
       return 0;
     }
   }
-} // }}}
+}
 
-class TagZeroPad // {{{
+class TagZeroPad
 {
   inherit RXML.Tag;
   constant name = "zeropad";
@@ -1424,9 +1179,9 @@ class TagZeroPad // {{{
       return 0;
     }
   }
-} // }}}
+}
 
-class TagSleep // {{{
+class TagSleep
 {
   inherit RXML.Tag;
   constant name = "sleep";
@@ -1449,9 +1204,9 @@ class TagSleep // {{{
       return 0;
     }
   }
-} // }}}
+}
 
-class TagPageUri // {{{
+class TagPageUri
 {
   inherit RXML.Tag;
   constant name = "page-uri";
@@ -1489,9 +1244,9 @@ class TagPageUri // {{{
       return 0;
     }
   }
-} // }}}
+}
 
-class TagSwapProtocol // {{{
+class TagSwapProtocol
 {
   inherit RXML.Tag;
   constant name = "swap-protocol";
@@ -1572,9 +1327,9 @@ class TagSwapProtocol // {{{
       return 0;
     }
   }
-} // }}}
+}
 
-class TagNiceSize // {{{
+class TagNiceSize
 {
   inherit RXML.Tag;
   constant name = "nicesize";
@@ -1608,9 +1363,9 @@ class TagNiceSize // {{{
       return 0;
     }
   }
-} // }}}
+}
 
-class TagStripTags // {{{
+class TagStripTags
 // A copy of html_wash.pike except this can take defines of tags to not
 // paragraphify when paragraphify is being used.
 {
@@ -1889,95 +1644,9 @@ class TagStripTags // {{{
       Regexp("(((http)|(https)|(ftp))://(" L_VALID_CHARS "+)(\\." L_VALID_CHARS "+)+)|"
              "(((www)|(ftp))(\\." L_VALID_CHARS "+)+)");
   }
-} // }}}
+}
 
-class TagAQuery // {{{
-{
-  inherit RXML.Tag;
-  constant name = "a-query";
-
-  mapping(string:RXML.Type) req_arg_types = ([
-    "name"  : RXML.t_text(RXML.PEnt),
-    "value"  : RXML.t_text(RXML.PEnt),
-  ]);
-
-  mapping(string:RXML.Type) opt_arg_types = ([
-    "toggle"      : RXML.t_text(RXML.PEnt),
-    "toggle-text" : RXML.t_text(RXML.PEnt),
-    "add-class"   : RXML.t_text(RXML.PEnt),
-    "wrap"        : RXML.t_text(RXML.PEnt),
-  ]);
-
-  class Frame
-  {
-    inherit RXML.Frame;
-
-    array do_return(RequestID id)
-    {
-      array(string)tmp = ({});
-      int(0..1) isset = 0;
-      int(0..1) toggle = 0;
-
-      foreach ((id->query||"")/"&", string p) {
-        sscanf(p, "%s=%s", string k, string v);
-        if (k == args->name) {
-          isset = 1;
-          if (args->toggle && v != args->toggle) {
-            v = args->toggle;
-            toggle = 1;
-          }
-          else
-            v = args->value;
-        }
-        if (k && v && sizeof(v))
-          tmp += ({ sprintf("%s=%s", k, v) });
-      }
-
-      string out = tmp*"&";
-
-      if (!isset) {
-        if (sizeof(out)) out += "&";
-        out += sprintf("%s=%s", args->name, args->value);
-      }
-      else {
-        TRACE("Isset is true: %O\n", out);
-      }
-
-      if (sizeof(out))
-        out = "?" + out;
-
-      if (toggle) {
-        if (args->wrap)
-          content = sprintf( "<%s>%s</%[0]s>", args->wrap,args["toggle-text"] );
-        else
-          content = args["toggle-text"];
-      }
-
-
-      if ( args["add-class"] && toggle) {
-        if ( args["class"] )
-          args["class"] += " " + args["add-class"] ;
-        else
-          args["class"] = args["add-class"];
-      }
-
-      string href = args->href;
-      m_delete(args, "name");
-      m_delete(args, "value");
-      m_delete(args, "href");
-      m_delete(args, "wrap");
-      m_delete(args, "toggle");
-      m_delete(args, "toggle-text");
-      m_delete(args, "add-class");
-
-      result = sprintf("<a href='%s%s'%{ %s='%s'%}>%s</a>",
-                       id->not_query, out, (array)args, content);
-      return 0;
-    }
-  }
-} // }}}
-
-class TagVcalendar // {{{
+class TagVcalendar
 {
   inherit RXML.Tag;
   constant name = "vcalendar";
@@ -2039,260 +1708,9 @@ class TagVcalendar // {{{
       RXML_CONTEXT->extend_scope("header", headers);
     }
   }
-} // }}}
-
-class TagTooltip // {{{
-{
-  inherit RXML.Tag;
-  constant name = "tooltip";
-
-  mapping(string:RXML.Type) req_arg_types = ([
-    "title" : RXML.t_text(RXML.PEnt)
-  ]);
-
-  class Frame
-  {
-    inherit RXML.Frame;
-    array do_return(RequestID id)
-    {
-      args->title += "::" + content;
-      result = "<em" + mk_attr_str(args) + "><span>?</span></em>\n";
-      return 0;
-    }
-
-    string mk_attr_str(mapping m)
-    {
-
-      if ( !m["class"] )
-        m["class"] = "help";
-
-      string s = "";
-      foreach (m; string k; string v)
-        s += " " + k + "='" + Roxen.html_encode_string(v) + "'";
-
-      return s;
-    }
-  }
-} // }}}
-
-class TagTVInput // {{{
-{
-  inherit RXML.Tag;
-  constant name = "tvinput";
-
-  mapping(string:RXML.Type) req_arg_types = ([
-    "type"   : RXML.t_text(RXML.PXml),
-    "name"   : RXML.t_text(RXML.PXml)
-  ]);
-
-  mapping(string:RXML.Type) opt_arg_types = ([
-    "forget" : RXML.t_text(RXML.PXml)
-  ]);
-
-  mapping no_vinput = ([
-    "select"   : 1,
-    "radio"    : 1,
-    "checkbox" : 1,
-    "submit"   : 1,
-    "button"   : 1,
-    "file"     : 1
-  ]);
-
-  class Frame
-  {
-    inherit RXML.Frame;
-    array do_return(RequestID id)
-    {
-      if (!id->misc->tvinput)
-        id->misc->tvinput = 0;
-
-      id->misc->tvinput++;
-      if (!args->tabindex)
-        args->tabindex = id->misc->tvinput;
-
-      args->tabindex = (string)args->tabindex;
-
-      if (args->required && args->id) {
-        if (!args["data-required"])
-          args["data-required"] = "Fyll i fältet (" + args->name + ")";
-
-        content = "<form-error id='" + args->id + "'>" +
-                  args["data-required"] + "</form-error>";
-      }
-
-      if (no_vinput[args->type] || args->forget) {
-        m_delete(args, "forget");
-        if (args->type == "select") {
-          m_delete(args, "type");
-          result = Roxen.make_container("select", args, content);
-        }
-        else if (args->type == "file")
-          result = Roxen.make_container("input", args, content);
-        else
-          result = Roxen.make_tag("input", args);
-      }
-      else {
-        if (args->min) args->minlength = args->min;
-        if (args->required && (!args->min || !args->minlength))
-          args->minlength = "1";
-
-        result = Roxen.parse_rxml(Roxen.make_container("vinput",args,content),
-                                  id);
-      }
-
-      return 0;
-    }
-  }
-} // }}}
-
-class TagTVInputTabindex // {{{
-{
-  inherit RXML.Tag;
-  constant name = "tvinput-tabindex";
-
-  mapping(string:RXML.Type) opt_arg_types = ([
-    "variable" : RXML.t_text(RXML.PXml),
-    "inc" : RXML.t_text(RXML.PXml)
-  ]);
-
-  class Frame
-  {
-    inherit RXML.Frame;
-    array do_return(RequestID id)
-    {
-      if (zero_type(id->misc->tvinput))
-        id->misc->tvinput = 0;
-
-      if (args->inc)
-        id->misc->tvinput++;
-
-      if (args->variable)
-        RXML.user_set_var(args->variable, id->misc->tvinput);
-      else
-        result = (string)id->misc->tvinput;
-    }
-  }
 }
 
-class TagCSSCompat // {{{
-{
-  inherit RXML.Tag;
-  constant name = "css-compat";
-
-  mapping(string:RXML.Type) opt_arg_types = ([
-    "rule"  : RXML.t_text(RXML.PXml),
-    "name"  : RXML.t_text(RXML.PXml),
-    "value" : RXML.t_text(RXML.PXml)
-  ]);
-
-  array prefixes = ({ "-moz-", "-webkit-", "-o-", "-ms-", "" });
-
-  class Frame
-  {
-    inherit RXML.Frame;
-    array do_return(RequestID id)
-    {
-      if (args->rule) {
-        if (args->rule[-1] == ';')
-          args->rule[0..sizeof(args->rule)-2];
-
-        args->rule += ";\n";
-
-        result = String.trim_all_whites(args->rule + (prefixes * (args->rule)));
-        return 0;
-      }
-      else if (args->name && args->value) {
-        args->name += ":";
-        array(string) b = ({ args->name + args->value });
-        foreach (prefixes[0..sizeof(prefixes)-2], string p) {
-          b += ({ args->name + p + args->value });
-        }
-
-        result = b * ";\n";
-      }
-      else result = "APA";
-    }
-  }
-} // }}}
-
-class TagNotify // {{{
-{
-  inherit RXML.Tag;
-  constant name = "notify";
-
-  mapping(string:RXML.Type) opt_arg_types = ([
-    "auto-remove" : RXML.t_text(RXML.PXml),
-    "class" : RXML.t_text(RXML.PXml),
-    "ok" : RXML.t_text(RXML.PXml),
-  ]);
-
-  class Frame
-  {
-    inherit RXML.Frame;
-
-    array do_return(RequestID id)
-    {
-      string auto_rm = args["auto-remove"];
-      string klass = "notify" + (!!args->ok ? " notify-ok" : "");
-
-      if ( args["class"] )
-        klass += " " + args["class"];
-
-      m_delete(args, "ok");
-      m_delete(args, "auto-remove");
-
-      args["class"] = klass;
-
-      if (auto_rm) {
-        if (!sizeof(auto_rm))
-          auto_rm = "4000";
-        string gid = (string)Standards.UUID.make_version4();
-        content +=
-        "<span id='x" + gid + "'></span>"
-        "<script type='text/javascript'>"
-        "$(function() {"
-        " setTimeout(function() {"
-         " $('#x" + gid + "').parent().fadeOut(function() {"
-          " $(this).remove();"
-         " })"
-        " }, " + auto_rm + ");"
-        "})"
-        "</script>\n<noscript></noscript>\n";
-      }
-
-      result = Roxen.make_container("div", args, content);
-    }
-  }
-} // }}}
-
-class TagCancel // {{{
-{
-  inherit RXML.Tag;
-  constant name = "cancel";
-
-  mapping(string:RXML.Type) opt_arg_types = ([
-    "value" : RXML.t_text(RXML.PXml),
-    "url" : RXML.t_text(RXML.PXml)
-  ]);
-
-  class Frame
-  {
-    inherit RXML.Frame;
-
-    array do_return(RequestID id)
-    {
-      args->type = "button";
-      args->value = args->value || "Avbryt";
-      args->onclick = "document.location.href='" +
-                      (args->url||"/"+id->misc->localpath) + "'";
-      m_delete(args, "url");
-
-      result = Roxen.make_tag("input", args);
-    }
-  }
-} // }}}
-
-class TagIsSetOr // {{{
+class TagIsSetOr
 {
   inherit RXML.Tag;
   constant name = "issetor";
@@ -2311,158 +1729,8 @@ class TagIsSetOr // {{{
       result = sizeof(args->a) ? args->a : args->b;
     }
   }
-} // }}}
-
-class TagLog // {{{
-{
-  inherit RXML.Tag;
-  constant name = "log";
-
-  mapping(string:RXML.Type) req_arg_types = ([
-    /*"a" : RXML.t_text(RXML.PXml),
-    "b" : RXML.t_text(RXML.PXml)*/
-  ]);
-
-  class Frame
-  {
-    inherit RXML.Frame;
-
-    array do_return(RequestID id)
-    {
-      if (sizeof(content))
-        werror("%s\n", content);
-    }
-  }
-} // }}}
-
-class TagSafeFCKValue // {{{
-{
-  inherit RXML.Tag;
-  constant name = "safe-fck-value";
-
-  mapping(string:RXML.Type) opt_arg_types = ([
-    /*"value" : RXML.t_text(RXML.PEnt)*/
-  ]);
-
-  class Frame
-  {
-    inherit RXML.Frame;
-    array do_return(RequestID id)
-    {
-      int p_nth = 0;
-      int(0..1) p_p = 0;
-      int(0..1) capture = 1;
-      string ret = "";
-
-      Parser.HTML p = Parser.HTML();
-      p->case_insensitive_tag(1);
-      p->_set_tag_callback(
-        lambda (Parser.HTML pp, string data) {
-          string n = pp->tag_name();
-          mapping a = pp->tag_args();
-          if (n == "p") {
-            p_nth++;
-            if (p_nth > 1) {
-              if (!p_p) ret = "";
-              p_p = 1;
-              capture = 1;
-            }
-          }
-          else if (n == "/p") {
-            p_nth--;
-            if (p_p && p_nth == 1) {
-              ret += data;
-              capture = 0;
-            }
-          }
-
-          if (!p_p || capture == 1)
-            ret += data;
-        }
-      );
-
-      p->_set_data_callback(
-        lambda (Parser.HTML pp, string data) {
-          if (capture)
-            ret += data;
-        }
-      );
-
-      content = replace(content, ({ "\r", "\n" }), ({ "", "" }));
-      p->feed(content, 1)->finish();
-
-      result = ret;
-
-      return 0;
-    }
-  }
-} // }}}
-
-#if constant(Sitebuilder)
-
-class TagValidPathName // {{{
-{
-  inherit RXML.Tag;
-  constant name = "valid-path-name";
-
-  mapping(string:RXML.Type) req_arg_types = ([]);
-
-  mapping(string:RXML.Type) opt_arg_types = ([
-    "path" : RXML.t_text(RXML.PXml),
-    "lengt" :  RXML.t_text(RXML.PXml)
-  ]);
-
-  class Frame
-  {
-    inherit RXML.Frame;
-
-    array do_return(RequestID id)
-    {
-      int len = (args->length && (int)args->length)||25;
-      result = Sitebuilder.mangle_to_valid_pathname(args->path||content,0,len);
-      return 0;
-    }
-  }
-} // }}}
-
-class TagGetUniqueComponentID // {{{
-/* Om vi skapar egna "editor"-sidor genom sb-edit-area och lägger in
- * komponenter kan vi anropa denna tagg för att få ett ID att lägga i
- * id-taggen för komponenten:
- *
- * <my-component>
- *   <id><get-unique-component-id /></id>
- *   <variant>0</variant>
- *   <!-- ... -->
- * </my-component>
-*/
-{
-  inherit RXML.Tag;
-  constant name = "get-unique-component-id";
-
-  mapping(string:RXML.Type) req_arg_types = ([]);
-
-  class Frame
-  {
-    inherit RXML.Frame;
-
-    array do_return(RequestID id)
-    {
-      result = Sitebuilder.Editor.get_unique_component_id();
-      return 0;
-    }
-  }
-} // }}}
-
-class TagGetUniqComponentID // {{{
-{
-  inherit TagGetUniqueComponentID;
-  constant name = "get-uniq-component-id";
-} // }}}
-
-#endif // Sitebuilder
-
-class TagEmitAttachment // {{{
+}
+class TagEmitAttachment
 {
   inherit RXML.Tag;
   constant name = "emit";
@@ -2499,9 +1767,9 @@ class TagEmitAttachment // {{{
 
     return res;
   }
-} // }}}
+}
 
-class TagEmitGroupedKeywords // {{{
+class TagEmitGroupedKeywords
 {
   inherit RXML.Tag;
   constant name = "emit";
@@ -2536,67 +1804,9 @@ class TagEmitGroupedKeywords // {{{
 
     return res;
   }
-} // }}}
+}
 
-class TagEmitVariable // {{{
-{
-  inherit RXML.Tag;
-  constant name = "emit";
-  constant plugin_name = "variable";
-
-  mapping(string:RXML.Type) req_arg_types = ([
-    "variable"  : RXML.t_text(RXML.PXml)
-  ]);
-
-  mapping(string:RXML.Type) opt_arg_types = ([]);
-
-  array get_dataset(mapping args, RequestID id)
-  {
-    array(mapping) res = ({});
-    mapping(string:array) tmp = ([]);
-    mixed data = RXML.user_get_var(args->variable);
-
-    if (arrayp(data))
-      res = data;
-    else if (stringp(data)) {
-      array(string) t = data/(","||args->split);
-      foreach (t, string s) {
-        res += ({ ([ "value" : String.trim_all_whites(s) ]) });
-      }
-    }
-    else if (mappingp(data)) {
-      foreach (data; string k; mixed v) {
-        res += ({ ([ "index" : k, "value" : v ]) });
-      }
-    }
-    else
-      RXML.parse_error("Unhandled datatype in emit#variable\n");
-
-    return res;
-  }
-} // }}}
-
-class TagFileUpload // {{{
-{
-  inherit RXML.Tag;
-  constant name = "file-upload";
-
-  mapping(string:RXML.Type) opt_arg_types = ([
-    "path" : RXML.t_text(RXML.PXml),
-    "chroot" : RXML.t_text(RXML.PXml),
-  ]);
-
-  class Frame
-  {
-    inherit RXML.Frame;
-    array do_return(RequestID id)
-    {
-      return 0;
-    }
-  }
-} // }}}
-
-class TagMonthName // {{{
+class TagMonthName
 {
   inherit RXML.Tag;
   constant name = "month-name";
@@ -2636,176 +1846,14 @@ class TagMonthName // {{{
       return 0;
     }
   }
-} // }}}
+}
 
-class TagHtmlMailToText // {{{
-{
-  inherit RXML.Tag;
-  constant name = "html-mail-to-text";
-
-  mapping(string:RXML.Type) opt_arg_types = ([
-    /*"split" : RXML.t_text(RXML.PXml)*/
-  ]);
-
-  mapping block_tags = ([
-    "/div" : 1,
-    "/fieldset" : 1
-  ]);
-
-  mapping inline_tags = ([
-    "/strong" : 1,
-    "/span" : 1,
-    "/small" : 1
-  ]);
-
-  class Frame
-  {
-    inherit RXML.Frame;
-    array do_return(RequestID id)
-    {
-      int(0..1) collect = 0;
-
-      string repeat_header(string what) {
-        return "\n" + (what * 80) + "\n\n";
-      };
-
-      Parser.HTML p = Parser.HTML();
-
-      p->add_container("html",
-        lambda(Parser.HTML pp, mapping args, string cont) {
-          TRACE("HTML tag\n");
-          return String.trim_all_whites(cont);
-        }
-      );
-
-#define FEED_DEEPER(X) (pp->clone()->feed(X)->finish()->read())
-
-      p->add_containers(([
-        "head" : lambda(Parser.HTML pp, mapping args, string cont) {
-          TRACE("Head tag\n");
-          return "";
-        },
-        "body" : lambda(Parser.HTML pp, mapping args, string cont) {
-          TRACE("Body tag\n");
-          return String.trim_all_whites(cont);
-        },
-        "h1" : lambda(Parser.HTML pp, mapping args, string cont) {
-          TRACE("H1 tag\n");
-          return ({ "\n" + FEED_DEEPER(cont) + repeat_header("=") });
-        },
-        "h2" : lambda(Parser.HTML pp, mapping args, string cont) {
-          TRACE("H2 tag\n");
-          return ({ "\n" + FEED_DEEPER(cont) + repeat_header("-") });
-        },
-        "h3" : lambda(Parser.HTML pp, mapping args, string cont) {
-          TRACE("H3 tag\n");
-          return ({ "\n" + FEED_DEEPER(cont) + repeat_header(".") });
-        },
-        "p" : lambda(Parser.HTML pp, mapping args, string cont) {
-          TRACE("P tag\n\n");
-          return ({ FEED_DEEPER(cont) + "\n\n" });
-        },
-        "small" : lambda(Parser.HTML pp, mapping args, string cont) {
-          TRACE("small tag\n");
-          return ({ cont });
-        },
-        "ul" : lambda(Parser.HTML pp, mapping args, string cont) {
-          TRACE("UL tag\n");
-          return ({ "\n" + FEED_DEEPER(String.trim_all_whites(cont)) + "\n" });
-        },
-        "ol" : lambda(Parser.HTML pp, mapping args, string cont) {
-          TRACE("OL tag\n");
-          return ({ "\n" + FEED_DEEPER(String.trim_all_whites(cont)) + "\n" });
-        },
-        "li" : lambda(Parser.HTML pp, mapping args, string cont) {
-          TRACE("li tag\n\n");
-          return ({ "  * " + FEED_DEEPER(cont) + "\n" });
-        },
-      ]));
-
-      p->_set_tag_callback(
-        lambda(Parser.HTML pp) {
-          string tn = pp->tag_name();
-          string s;
-          if (block_tags[tn]) {
-            s = "\n";
-          }
-          else if (inline_tags[tn]) {
-            s = " ";
-          }
-          else {
-            s = "";
-          }
-
-          return ({ s });
-        }
-      );
-
-      p->_set_data_callback(lambda(Parser.HTML pp, string data) {
-        sscanf(data, "%*[ \t\n]%s", data);
-        return ({ data });
-      });
-
-      string x = p->feed(content)->finish()->read()||"";
-
-      TRACE("res: %O\n", x);
-
-      result = x || "(nothing)";
-
-      return 0;
-    }
-  }
-} // }}}
-
-class TagString2Minutes // {{{
-{
-  inherit RXML.Tag;
-  constant name = "string2minutes";
-
-  mapping(string:RXML.Type) opt_arg_types = ([
-    "value" : RXML.t_text(RXML.PXml)
-  ]);
-
-  class Frame
-  {
-    inherit RXML.Frame;
-    array do_return(RequestID id)
-    {
-      string v;
-
-      if (args->value)
-        v = args->value;
-      else
-        v = content;
-
-      result = (string) string2minutes(v);
-
-      return 0;
-    }
-  }
-} // }}}
-
-int string2minutes(string stime) // {{{
-{
-  stime = replace(stime, ",", ".");
-  int h, m, minutes;
-
-  if (sscanf (stime, "%d:%d", h, m) == 2)
-    minutes = h*60 + m;
-  else if (sscanf (stime, "%d.%d", h, m) == 2)
-    minutes = (int)(((float)stime) * 60);
-  else
-    m = minutes = (int)stime;
-
-  return minutes;
-} // }}}
-
-void create(Configuration _conf) // {{{
+void create(Configuration _conf)
 {
   conf = _conf;
-  set_module_creator("Pontus Östlund <pontus@poppa.se>");
-} // }}}
+  set_module_creator("Pontus Östlund <poppanator@gmail.com>");
+}
 
-void start(int when, Configuration _conf) // {{{
+void start(int when, Configuration _conf)
 {
-} // }}}
+}

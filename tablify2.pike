@@ -1,7 +1,7 @@
 // This is a Roxen® module
 // Based on the original tablify.pike
 //
-// Author: Pontus Östlund <pontus@poppa.se>
+// Author: Pontus Östlund <poppanator@gmail.com>
 //
 // Tab width:    8
 // Indent width: 2
@@ -164,7 +164,7 @@ array _tags = ({ "br", "button", "hr", "img", "input" });
 void create(Configuration _conf) // {{{
 {
   set_module_creator("Pontus Östlund (with a little help from some original "
-                     "Roxen modules) <pontus@poppa.se>");
+                     "Roxen modules) <poppanator@gmail.com>");
 } // }}}
 
 // start

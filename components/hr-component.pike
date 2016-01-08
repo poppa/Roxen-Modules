@@ -20,7 +20,7 @@ import Parser.XML.Tree;
 #define LOCALE(X,Y)	 _STR_LOCALE("sitebuilder",X,Y)
 #define DLOCALE(X,Y) _DEF_LOCALE("sitebuilder",X,Y)
 
-constant module_name = "Poppa Editor Component: Sidavdelare";
+constant module_name = "Poppa Editor Component: Page divider";
 // constant module_doc = "To be provided";
 
 #define TRIM(S) String.trim_all_whites((S))
@@ -31,7 +31,7 @@ class HrComponentPlugin
 
   string get_component_name()
   {
-    return LOCALE(0, "Sidavdelare");
+    return LOCALE(0, "Page divider");
   }
 
   string get_component_tag()
@@ -53,17 +53,17 @@ class HrComponentInstance
   {
     return
     render_field("class",
-		 ([ "title"   : LOCALE(0, "CSS-klass"),
+		 ([ "title"   : LOCALE(0, "CSS class"),
 		    "type"    : "string",
 		    "size"    : "60",
 		    "name"    : var_prefix + "class" ]), id) +
     render_field("margin-top",
-		 ([ "title"   : LOCALE(0, "Marginal ovanför (pixlar)"),
+		 ([ "title"   : LOCALE(0, "Margin above (pixels)"),
 		    "type"    : "string",
 		    "size"    : "60",
 		    "name"    : var_prefix + "margin-top" ]), id) +
     render_field("margin-bottom",
-		 ([ "title"   : LOCALE(0, "Marginal nedanför (pixlar)"),
+		 ([ "title"   : LOCALE(0, "Margin below (pixels)"),
 		    "type"    : "string",
 		    "size"    : "60",
 		    "name"    : var_prefix + "margin-bottom" ]), id);
